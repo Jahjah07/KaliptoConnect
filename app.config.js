@@ -6,7 +6,7 @@ export default {
     slug: "kaliptoconnect",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
+    icon: "./assets/images/Contractor_Application_Logo.png",
     scheme: "kaliptoconnect",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
@@ -14,11 +14,10 @@ export default {
       supportsTablet: true
     },
     android: {
+      package: "com.kaliptoconnect.app",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
-        foregroundImage: "./assets/images/android-icon-foreground.png",
-        backgroundImage: "./assets/images/android-icon-background.png",
-        monochromeImage: "./assets/images/android-icon-monochrome.png"
+        foregroundImage: "./assets/images/Contractor_Application_Logo.png"
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false
@@ -49,6 +48,12 @@ export default {
 
     // ⭐ ENV VARIABLES + EAS PROJECT ID
     extra: {
+      EXPO_PUBLIC_FIREBASE_API_KEY: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+      EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      EXPO_PUBLIC_FIREBASE_PROJECT_ID: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+      EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      EXPO_PUBLIC_FIREBASE_APP_ID: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
       ENVIRONMENT: process.env.ENVIRONMENT,
       EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
       eas: {

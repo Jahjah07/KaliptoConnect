@@ -8,9 +8,10 @@ interface Props {
   id: string;
   name: string;
   address?: string;
+  status?: string;
 }
 
-export default function ProjectListCard({ id, name, address }: Props) {
+export default function ProjectListCard({ id, name, address, status }: Props) {
   return (
     <Link href={`/(dashboard)/project/${id}`} asChild>
       <TouchableOpacity
@@ -46,7 +47,7 @@ export default function ProjectListCard({ id, name, address }: Props) {
             {name}
           </Text>
           <Text style={{ color: "#6B7280", marginTop: 2 }}>
-            {address || "No address"}
+            {status || "No status"}
           </Text>
         </View>
       </TouchableOpacity>

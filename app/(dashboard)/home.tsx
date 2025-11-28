@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/colors";
@@ -6,9 +6,11 @@ import StatCard from "@/components/dashboard/StatCard";
 import ProjectListCard from "@/components/dashboard/ProjectListCard";
 import { fetchContractorProjects } from "@/services/projects.service";
 import { useAuthStore } from "@/store/auth.store";
+import { useFocusEffect } from "expo-router";
 
 export default function Home() {
   const user = useAuthStore((s) => s.user);
+
   const initials = user?.displayName
     ? user.displayName.split(" ").map((n) => n[0]).join("").toUpperCase()
     : "U";
@@ -16,19 +18,24 @@ export default function Home() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await fetchContractorProjects();
-        setProjects(data || []);
-      } catch (err) {
-        console.log("Dashboard load error:", err);
-      } finally {
-        setLoading(false);
+  // 🔄 Auto-refresh when the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      async function load() {
+        setLoading(true);
+        try {
+          const data = await fetchContractorProjects();
+          setProjects(Array.isArray(data) ? data : []);
+        } catch (err) {
+          console.log("Dashboard load error:", err);
+        } finally {
+          setLoading(false);
+        }
       }
-    }
-    load();
-  }, []);
+
+      load();
+    }, [])
+  );
 
   if (loading) {
     return (
@@ -38,6 +45,7 @@ export default function Home() {
     );
   }
 
+  // 📌 TOTALS
   const totalProjects = projects.length;
 
   const totalPhotos = projects.reduce(
@@ -50,8 +58,14 @@ export default function Home() {
     0
   );
 
-  const currentProject = projects.find((p) => p.status === "Ongoing");
-  const recentProjects = [...projects].slice(0, 3);
+  // 📌 FILTERS
+  const currentProjects = projects.filter(
+    (p) => p.status === "Pending" || p.status === "Active"
+  );
+
+  const recentProjects = projects
+    .filter((p) => p.status === "Completed" || p.status === "Cancelled")
+    .slice(0, 6);
 
   return (
     <ScrollView
@@ -66,9 +80,7 @@ export default function Home() {
           paddingBottom: 30,
         }}
       >
-        <Text style={{ color: COLORS.primary, opacity: 0.7 }}>
-          Welcome back,
-        </Text>
+        <Text style={{ color: COLORS.primary, opacity: 0.7 }}>Welcome back,</Text>
 
         <Text
           style={{
@@ -127,7 +139,7 @@ export default function Home() {
           <StatCard icon="image" label="Receipts" value={String(totalReceipts)} />
         </View>
 
-        {/* CURRENT PROJECT */}
+        {/* CURRENT PROJECTS */}
         <Text
           style={{
             fontWeight: "700",
@@ -136,29 +148,32 @@ export default function Home() {
             marginBottom: 12,
           }}
         >
-          Current Project
+          Current Projects
         </Text>
 
-        {currentProject ? (
-          <ProjectListCard
-            id={currentProject._id}
-            name={currentProject.name}
-            address={currentProject.location}
-          />
+        {currentProjects.length === 0 ? (
+          <View
+            style={{
+              backgroundColor: "#fff",
+              padding: 16,
+              borderRadius: 16,
+              shadowOpacity: 0.05,
+              shadowRadius: 4,
+              shadowOffset: { height: 2, width: 0 },
+            }}
+          >
+            <Text style={{ color: "#6B7280" }}>You have no active projects.</Text>
+          </View>
         ) : (
-            <View
-              style={{
-                backgroundColor: "#fff",
-                padding: 16,
-                borderRadius: 16,
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-                shadowOffset: { height: 2, width: 0 },
-              }}
-            >
-              <Text style={{ color: "#6B7280" }}>You have no active project.</Text>
-            </View>
-          )}
+          currentProjects.map((p) => (
+            <ProjectListCard
+              key={p._id}
+              id={p._id}
+              name={p.name}
+              status={p.status}
+            />
+          ))
+        )}
 
         {/* RECENT PROJECTS */}
         <View
@@ -178,15 +193,15 @@ export default function Home() {
           </Text>
         </View>
 
-        {projects.length === 0 ? (
-          <Text style={{ color: "#6B7280" }}>No recent projects.</Text>
+        {recentProjects.length === 0 ? (
+          <Text style={{ color: "#6B7280" }}>No completed projects.</Text>
         ) : (
           recentProjects.map((p) => (
             <ProjectListCard
               key={p._id}
               id={p._id}
               name={p.name}
-              address={p.location}
+              status={p.status}
             />
           ))
         )}

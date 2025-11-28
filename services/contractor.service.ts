@@ -5,93 +5,114 @@ const API_URL =
   Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ||
   "https://crm-system-gray.vercel.app/api";
 
+/**
+ * Helper to always send Firebase ID token
+ */
+async function authHeaders() {
+  const token = await auth.currentUser?.getIdToken(true); // force refresh
+  return {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+}
+
+/* ----------------------------------------
+🔹 1. CREATE CONTRACTOR (POST)
+----------------------------------------- */
 export async function createContractor(payload: {
   name: string;
   email: string;
-  firebaseUid: string;
 }) {
-  const token = await auth.currentUser?.getIdToken(true); // 🔥 force refresh
-
-  console.log("🔹 API_URL:", API_URL);
-  console.log("🔹 Sending contractor payload:", payload);
-  console.log("🔹 Firebase ID Token:", token ? "exists" : "missing");
-
-  const res = await fetch(`${API_URL}/contractors`, {
+  const res = await fetch(`${API_URL}/mobile/contractor`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers: await authHeaders(),
     body: JSON.stringify(payload),
   });
 
-  console.log("🔹 API Status:", res.status);
-
   if (!res.ok) {
-    const errorText = await res.text();
-    console.log("🔹 API Error:", errorText);
-    throw new Error(`Contractor create failed: ${res.status}`);
+    const err = await res.text();
+    console.log("❌ Create contractor:", err);
+    throw new Error(err);
   }
 
   return res.json();
 }
 
+/* ----------------------------------------
+🔹 2. GET CONTRACTOR PROFILE (GET)
+----------------------------------------- */
+export async function getContractor() {
+  const res = await fetch(`${API_URL}/mobile/contractor`, {
+    headers: await authHeaders(),
+  });
 
-export async function updateContractorDocument(
-  id: string,
-  field: string,
-  value: string | { expiry: string }
+  if (!res.ok) {
+    const err = await res.text();
+    console.log("❌ Get contractor:", err);
+    throw new Error(err);
+  }
+
+  return res.json();
+}
+
+/* ----------------------------------------
+🔹 3. UPDATE PROFILE (PUT)
+----------------------------------------- */
+export async function updateContractorProfile(
+  updates: Record<string, any>
 ) {
-  const token = await auth.currentUser?.getIdToken();
-
-  const res = await fetch(`${API_URL}/contractors/${id}`, {
+  const res = await fetch(`${API_URL}/mobile/contractor/update`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ [field]: value }),
+    headers: await authHeaders(),
+    body: JSON.stringify(updates),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    console.log("❌ Document update failed:", err);
+    console.log("❌ Update profile:", err);
     throw new Error(err);
   }
 
   return res.json();
 }
 
-// 🔹 Update basic contractor profile (name, phone, trade, etc.)
-export async function updateContractorProfile(id: string, data: any) {
-  const token = await auth.currentUser?.getIdToken();
-
-  const res = await fetch(`${API_URL}/contractors/${id}`, {
+/* ----------------------------------------
+🔹 4. UPDATE DOCUMENT (PUT)
+----------------------------------------- */
+export async function updateContractorDocument(
+  field: string,
+  fileUrl: string,
+  expiry?: string
+) {
+  const res = await fetch(`${API_URL}/mobile/contractor/documents`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data), // whole object allowed
+    headers: await authHeaders(),
+    body: JSON.stringify({ field, fileUrl, expiry }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    console.log("❌ Profile update failed:", err);
+    console.log("❌ Update document:", err);
     throw new Error(err);
   }
 
   return res.json();
 }
 
-export async function getContractor(uid: string) {
-  const token = await auth.currentUser?.getIdToken();
-
-  const res = await fetch(`${API_URL}/contractors/${uid}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+/* ----------------------------------------
+🔹 5. DELETE ACCOUNT (DELETE)
+----------------------------------------- */
+export async function deleteContractor() {
+  const res = await fetch(`${API_URL}/mobile/contractor/delete`, {
+    method: "DELETE",
+    headers: await authHeaders(),
   });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.log("❌ Delete contractor:", err);
+    throw new Error(err);
+  }
 
   return res.json();
 }

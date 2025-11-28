@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, Link } from "expo-router";
-import { getProjectById } from "@/services/api";
+import { useFocusEffect } from "@react-navigation/native";
+import { fetchProjectById } from "@/services/projects.service";  // updated service
 import { COLORS } from "@/constants/colors";
 import { usePhotoUpload } from "@/hooks/usePhotoUpload";
 
@@ -10,25 +11,28 @@ export default function ProjectDetail() {
   const projectId = String(id);
 
   const [project, setProject] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const { takePhoto } = usePhotoUpload(projectId);
+  const { takePhoto } = usePhotoUpload();
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await getProjectById(projectId);
-        setProject(data.project);
-      } catch (err) {
-        console.log(err);
-      } finally {
-        setLoading(false);
+  // 🔄 Auto-refresh when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      async function load() {
+        setLoading(true);
+        try {
+          const data = await fetchProjectById(projectId);
+          setProject(data); // FIXED: backend returns the project directly
+        } catch (err) {
+          console.log("Failed to load project:", err);
+        } finally {
+          setLoading(false);
+        }
       }
-    }
 
-    load();
-  }, []);
+      load();
+    }, [projectId])
+  );
 
   if (loading || !project) {
     return (
@@ -40,9 +44,9 @@ export default function ProjectDetail() {
 
   return (
     <ScrollView style={{ padding: 20 }}>
-      <Text style={{ fontSize: 24, fontWeight: "700" }}>{project.name}</Text>
+      <Text style={{ fontSize: 24, fontWeight: "700", marginTop: 20 }}>{project.name}</Text>
       <Text style={{ color: "#6B7280", marginBottom: 20 }}>
-        {project.address}
+        {project.location || "No address"}
       </Text>
 
       {/* TAKE PHOTO */}

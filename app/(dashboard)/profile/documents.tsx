@@ -7,21 +7,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/colors";
-import { useAuthStore } from "@/store/auth.store";
-import {
-  getContractor,
-  updateContractorDocument,
-} from "@/services/contractor.service";
+import { getContractor, updateContractorDocument } from "@/services/contractor.service";
 import DocumentUploadCard from "@/components/documents/DocumentUploadCard";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
 export default function DocumentsScreen() {
-  const user = useAuthStore((s) => s.user);
-  const uid = user?.uid;
-
   const [contractor, setContractor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,12 +21,14 @@ export default function DocumentsScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedField, setSelectedField] = useState<string | null>(null);
 
-  // Load contractor
+  // ---------------------------
+  // LOAD CONTRACTOR PROFILE
+  // ---------------------------
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
-        const data = await getContractor(uid!);
+        const data = await getContractor();
         setContractor(data);
       } catch (err) {
         console.log("Failed to load contractor:", err);
@@ -42,10 +36,13 @@ export default function DocumentsScreen() {
         setLoading(false);
       }
     }
-    if (uid) load();
-  }, [uid]);
 
-  // Image Upload Handler
+    load();
+  }, []);
+
+  // ---------------------------
+  // IMAGE UPLOAD HANDLER
+  // ---------------------------
   const handleUpload = async (field: string) => {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -56,18 +53,22 @@ export default function DocumentsScreen() {
 
     const uri = res.assets[0].uri;
 
-    const updated = await updateContractorDocument(uid!, field, uri);
+    const updated = await updateContractorDocument(field, uri);
     setContractor(updated);
   };
 
-  // Expiry Picker
+  // ---------------------------
+  // EXPIRY DATE HANDLER
+  // ---------------------------
   const handleExpiryChange = async (_: any, date?: Date) => {
     setShowDatePicker(false);
 
     if (selectedField && date) {
-      const updated = await updateContractorDocument(uid!, selectedField, {
-        expiry: date.toISOString().slice(0, 10),
-      });
+      const expiry = date.toISOString().slice(0, 10);
+
+      // Map field → correct backend fields
+      const updated = await updateContractorDocument(selectedField, "", expiry);
+
       setContractor(updated);
     }
   };
@@ -85,7 +86,6 @@ export default function DocumentsScreen() {
       style={{ flex: 1, padding: 20, backgroundColor: COLORS.background }}
       contentContainerStyle={{ paddingBottom: 100 }}
     >
-      {/* Header */}
       <Text
         style={{
           fontSize: 26,
@@ -104,7 +104,7 @@ export default function DocumentsScreen() {
         expiry={contractor.abnExpiry}
         onUpload={() => handleUpload("abn")}
         onExpiryChange={() => {
-          setSelectedField("abnExpiry");
+          setSelectedField("abn");
           setShowDatePicker(true);
         }}
       />
@@ -116,7 +116,7 @@ export default function DocumentsScreen() {
         expiry={contractor.contractorLicenseExpiry}
         onUpload={() => handleUpload("contractorLicense")}
         onExpiryChange={() => {
-          setSelectedField("contractorLicenseExpiry");
+          setSelectedField("contractorLicense");
           setShowDatePicker(true);
         }}
       />
@@ -128,7 +128,7 @@ export default function DocumentsScreen() {
         expiry={contractor.driversLicenseExpiry}
         onUpload={() => handleUpload("driversLicense")}
         onExpiryChange={() => {
-          setSelectedField("driversLicenseExpiry");
+          setSelectedField("driversLicense");
           setShowDatePicker(true);
         }}
       />
@@ -140,7 +140,7 @@ export default function DocumentsScreen() {
         expiry={contractor.publicLiabilityExpiry}
         onUpload={() => handleUpload("publicLiabilityCopy")}
         onExpiryChange={() => {
-          setSelectedField("publicLiabilityExpiry");
+          setSelectedField("publicLiabilityCopy");
           setShowDatePicker(true);
         }}
       />
@@ -152,7 +152,7 @@ export default function DocumentsScreen() {
         expiry={contractor.workersInsuranceExpiry}
         onUpload={() => handleUpload("workersInsuranceCopy")}
         onExpiryChange={() => {
-          setSelectedField("workersInsuranceExpiry");
+          setSelectedField("workersInsuranceCopy");
           setShowDatePicker(true);
         }}
       />

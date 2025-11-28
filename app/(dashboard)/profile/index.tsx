@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/colors";
 import { useAuthStore } from "@/store/auth.store";
 import { getContractor } from "@/services/contractor.service";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { logout } from "@/services/auth.service";
 
 export default function ProfileOverview() {
@@ -25,21 +25,23 @@ export default function ProfileOverview() {
   const [showLogout, setShowLogout] = useState(false);
 
   // Load contractor profile
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await getContractor(uid!);
-        setContractor(data);
-      } catch (err) {
-        console.log("Failed to load contractor:", err);
-      } finally {
-        setLoading(false);
+  useFocusEffect(
+    useCallback(() => {
+      async function load() {
+        setLoading(true);
+        try {
+          const data = await getContractor();
+          setContractor(data);
+        } catch (err) {
+          console.log("Failed to load contractor:", err);
+        } finally {
+          setLoading(false);
+        }
       }
-    }
 
-    if (uid) load();
-  }, [uid]);
+      if (user?.uid) load();
+    }, [user?.uid])
+  );
 
   if (loading || !contractor) {
     return (
@@ -89,7 +91,7 @@ export default function ProfileOverview() {
           >
             {contractor.name}
           </Text>
-          <Text style={{ color: "#6B7280", marginTop: 2 }}>
+          <Text style={{ color: COLORS.primary, marginTop: 2 }}>
             {contractor.email}
           </Text>
         </View>

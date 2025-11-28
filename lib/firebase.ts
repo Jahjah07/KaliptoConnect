@@ -1,28 +1,16 @@
-// Firebase for EAS build (modern React Native SDK)
-
 import { initializeApp } from "firebase/app";
-import { initializeAuth, getReactNativePersistence } from "firebase/auth/react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
-// Firebase config
 const firebaseConfig = {
-    apiKey: 'AIzaSyAk2qUwH4RcmbRXexSg1P--fbZbvjomSPY',
-    authDomain: 'kaliptoconnect.firebaseapp.com',
-    projectId: 'kaliptoconnect',
-    storageBucket: 'kaliptoconnect.firebasestorage.app',
-    messagingSenderId: '625115085862',
-    appId: '1:625115085862:web:836328a640aeb1009f7ae7',
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY!,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID!,
 };
 
-// Initialize
 const app = initializeApp(firebaseConfig);
 
-// Modern persistent auth for production
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
-
-export const firestore = getFirestore(app);
-export const storage = getStorage(app);
+// Only Auth (no Firestore)
+export const auth = getAuth(app);

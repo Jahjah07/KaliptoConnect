@@ -82,7 +82,7 @@ export default function ProjectsScreen() {
             key={p._id}
             id={p._id}
             name={p.name}
-            address={p.address}
+            status={p.status}
           />
         ))
       )}

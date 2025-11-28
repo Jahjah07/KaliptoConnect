@@ -10,27 +10,10 @@ export default function Index() {
 
   // Auto redirect if logged in
   if (user) {
-    return <Redirect href="/home" />;   // ✔ Correct
+    return <Redirect href="/home" />;
   }
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: COLORS.primary,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text style={{ color: "#fff", fontSize: 24, fontWeight: "700" }}>
-        KaliptoConnect
-      </Text>
-
-      <Pressable onPress={() => router.push("/login")} style={{ marginTop: 20 }}>
-        <Text style={{ color: "#fff", textDecorationLine: "underline" }}>
-          Go to Login
-        </Text>
-      </Pressable>
-    </View>
+    <Redirect href="/login" />
   );
 }
