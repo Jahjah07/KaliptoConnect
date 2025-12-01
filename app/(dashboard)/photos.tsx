@@ -1,20 +1,60 @@
-import React, { useState } from "react";
-import { View, Text, ScrollView, Image, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
+  Animated,
+} from "react-native";
 import { COLORS } from "@/constants/colors";
-import { usePhotoUpload } from "@/hooks/usePhotoUpload";
+import { fetchAllPhotos } from "@/services/photos.service";
+import { ProjectPhotosGroup, Photo } from "@/types/photo";
 
 export default function PhotosScreen() {
-  const { takePhoto } = usePhotoUpload();
+  const [all, setAll] = useState<ProjectPhotosGroup[]>([]);
+  const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // 🔹 Mock photos (you can replace with real API later)
-  const [photos] = useState([
-    { id: 1, uri: "https://picsum.photos/300?random=1" },
-    { id: 2, uri: "https://picsum.photos/300?random=2" },
-    { id: 3, uri: "https://picsum.photos/300?random=3" },
-    { id: 4, uri: "https://picsum.photos/300?random=4" },
-    { id: 5, uri: "https://picsum.photos/300?random=5" },
-  ]);
+  async function load() {
+    try {
+      setLoading(true);
+      const data = await fetchAllPhotos();
+      setAll(data);
+    } catch (err) {
+      console.log("Failed to load all photos:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  // Flatten all photos if filter = "all"
+  const filteredPhotos: Photo[] =
+    projectFilter === "all"
+      ? all.flatMap((p) => p.photos)
+      : all.find((p) => p.projectId === projectFilter)?.photos ?? [];
+
+  // Show loading spinner
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
@@ -23,76 +63,148 @@ export default function PhotosScreen() {
         style={{
           paddingHorizontal: 20,
           paddingTop: 60,
-          paddingBottom: 20,
-          backgroundColor: COLORS.background,
+          paddingBottom: 10,
         }}
       >
         <Text style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}>
           Site Photos
         </Text>
+
         <Text style={{ color: COLORS.primary, marginTop: 4 }}>
-          {photos.length} photos uploaded
+          {filteredPhotos.length} photos
         </Text>
       </View>
 
-      {/* PHOTO GRID */}
+      {/* FILTER CHIPS */}
       <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingBottom: 100,
-        }}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ paddingLeft: 20, marginVertical: 10 }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            justifyContent: "space-between",
-          }}
-        >
-          {photos.map((p) => (
-            <View
-              key={p.id}
-              style={{
-                width: "48%",
-                height: 160,
-                borderRadius: 14,
-                overflow: "hidden",
-                marginBottom: 16,
-                backgroundColor: "#eee",
-              }}
-            >
-              <Image
-                source={{ uri: p.uri }}
-                style={{ width: "100%", height: "100%" }}
-                resizeMode="cover"
-              />
-            </View>
-          ))}
-        </View>
+        {/* ALL PROJECTS */}
+        <FilterChip
+          label="All Projects"
+          active={projectFilter === "all"}
+          onPress={() => setProjectFilter("all")}
+        />
+
+        {/* INDIVIDUAL PROJECT TAGS */}
+        {all.map((p) => (
+          <FilterChip
+            key={p.projectId}
+            label={p.projectName}
+            active={projectFilter === p.projectId}
+            onPress={() => setProjectFilter(p.projectId)}
+          />
+        ))}
       </ScrollView>
 
-      {/* FLOATING BUTTON */}
-      <TouchableOpacity
-        onPress={takePhoto}
+      {/* EMPTY STATE */}
+      {filteredPhotos.length === 0 ? (
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            marginTop: 80,
+          }}
+        >
+          <Text style={{ fontSize: 18, color: "#6B7280" }}>No photos available</Text>
+        </View>
+      ) : (
+        <ScrollView
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+            }}
+          >
+            {filteredPhotos.map((photo, index) => (
+              <FadeInImage key={index} uri={photo.url} />
+            ))}
+          </View>
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+/* -------------------------
+   FILTER CHIP COMPONENT
+--------------------------*/
+function FilterChip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{
+        paddingVertical: 6,
+        paddingHorizontal: 14,
+        backgroundColor: active ? COLORS.primary : "#E5E7EB",
+        borderRadius: 18,
+        marginRight: 10,
+      }}
+    >
+      <Text
         style={{
-          position: "absolute",
-          bottom: 30,
-          right: 20,
-          backgroundColor: COLORS.primary,
-          width: 60,
-          height: 60,
-          borderRadius: 30,
-          justifyContent: "center",
-          alignItems: "center",
-          elevation: 6,
-          shadowColor: "#000",
-          shadowOpacity: 0.2,
-          shadowRadius: 4,
-          shadowOffset: { width: 0, height: 2 },
+          color: active ? "#fff" : "#374151",
+          fontWeight: "600",
         }}
       >
-        <Ionicons name="camera" size={28} color="#fff" />
-      </TouchableOpacity>
-    </View>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+/* -------------------------
+   FADE-IN IMAGE COMPONENT
+--------------------------*/
+function FadeInImage({ uri }: { uri: string }) {
+  const opacity = new Animated.Value(0);
+
+  const onLoad = () => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Animated.View
+      style={{
+        width: "48%",
+        height: 160,
+        borderRadius: 14,
+        overflow: "hidden",
+        marginBottom: 16,
+        backgroundColor: "#f1f1f1",
+        opacity,
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+      }}
+    >
+      <Image
+        source={{ uri }}
+        onLoad={onLoad}
+        style={{ width: "100%", height: "100%" }}
+        resizeMode="cover"
+      />
+    </Animated.View>
   );
 }

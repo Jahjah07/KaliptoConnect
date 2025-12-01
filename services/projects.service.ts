@@ -13,39 +13,54 @@ const API_URL =
   Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ||
   "https://crm-system-gray.vercel.app/api";
 
+// Log API URL immediately
+console.log("📡 [ProjectsService] API URL:", API_URL);
+
 /* ---------------------------------------
    🔹 Secure Token Getter
 ----------------------------------------*/
 async function getToken(): Promise<string> {
   const user = auth.currentUser;
 
+  console.log("👤 [ProjectsService] Current User:", user?.email ?? "NO USER");
+
   if (!user) {
     throw new Error("Not authenticated");
   }
 
-  return await user.getIdToken();
+  const token = await user.getIdToken();
+
+  console.log(
+    "🔐 [ProjectsService] Firebase ID Token:",
+    token.substring(0, 15) + "...(truncated)"
+  );
+
+  return token;
 }
 
 /* ---------------------------------------
    🔹 GET — Projects assigned to contractor
 ----------------------------------------*/
 export async function fetchContractorProjects(): Promise<Project[]> {
-  const token = await getToken();
-  if (!token) throw new Error("Not authenticated");
 
-  const res = await fetch(`${API_URL}/mobile/projects`, {
+  const token = await getToken();
+
+  const endpoint = `${API_URL}/mobile/projects`;
+
+  const res = await fetch(endpoint, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 
+
   if (!res.ok) {
     const text = await res.text();
-    console.log("❌ Projects list error:", text);
     throw new Error("Failed to fetch projects");
   }
 
   const data = await res.json();
+
   return Array.isArray(data) ? data : [];
 }
 
@@ -55,7 +70,9 @@ export async function fetchContractorProjects(): Promise<Project[]> {
 export async function fetchProjectById(id: string) {
   const token = await getToken();
 
-  const res = await fetch(`${API_URL}/mobile/projects/${id}`, {
+  const endpoint = `${API_URL}/mobile/projects/${id}`;
+
+  const res = await fetch(endpoint, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -63,9 +80,11 @@ export async function fetchProjectById(id: string) {
 
   if (!res.ok) {
     const text = await res.text();
-    console.log("❌ Project detail error:", text);
+    console.log("❌ [ProjectsService] Project detail error:", text);
     throw new Error("Not authorized to view this project");
   }
 
-  return (await res.json()) as unknown;
+  const json = await res.json();
+
+  return json;
 }

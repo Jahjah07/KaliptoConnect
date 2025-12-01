@@ -1,32 +1,46 @@
+// components/dashboard/StatCard.tsx
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/colors";
 
-export type IconName = keyof typeof Ionicons.glyphMap;
-
-interface StatCardProps {
-  icon: IconName;
-  label: string;
-  value: string | number;
-}
-
-export default function StatCard({ icon, label, value }: StatCardProps) {
+export default function StatCard({ icon, label, value, onPress }: any) {
   return (
-    <View
+    <Pressable
+      onPress={onPress}
       style={{
-        backgroundColor: COLORS.primary,
+        backgroundColor: "#fff",
         padding: 16,
-        width: "30%",
         borderRadius: 16,
+        width: "32%",
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
         alignItems: "center",
       }}
     >
-      <Ionicons name={icon} size={26} color="#fff" />
-      <Text style={{ color: "#fff", fontWeight: "700", marginTop: 8 }}>
+      <Ionicons name={icon} size={24} color={COLORS.primary} />
+
+      <Text
+        style={{
+          fontSize: 12,
+          color: "#6B7280",
+          marginTop: 6,
+        }}
+      >
+        {label}
+      </Text>
+
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: "700",
+          color: COLORS.primaryDark,
+          marginTop: 2,
+        }}
+      >
         {value}
       </Text>
-      <Text style={{ color: "#DCE3FF", fontSize: 12 }}>{label}</Text>
-    </View>
+    </Pressable>
   );
 }

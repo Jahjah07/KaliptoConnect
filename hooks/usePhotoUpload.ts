@@ -1,38 +1,59 @@
 import * as ImagePicker from "expo-image-picker";
-import { Alert } from "react-native";
-import { addPhoto } from "@/services/api";
+import { uploadPhoto } from "@/services/photos.service";
+import { useAuthStore } from "@/store/auth.store";
+import { useState } from "react";
 
-export function usePhotoUpload() {
+export function usePhotoUpload(projectId?: string) {
+  const user = useAuthStore((s) => s.user);
+
+  const [uploading, setUploading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
   const takePhoto = async () => {
-    // Ask camera permission
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permission required", "Camera access is needed.");
+    if (!projectId) {
+      console.log("❌ No project ID provided.");
       return;
     }
 
-    // Launch camera
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      alert("Camera permission is required.");
+      return;
+    }
+
     const result = await ImagePicker.launchCameraAsync({
-      quality: 0.7,
-      allowsEditing: false,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6,
+      base64: true,
     });
 
     if (result.canceled) return;
 
-    const asset = result.assets[0];
-    Alert.alert("Photo Taken!", `URI:\n${asset.uri}`);
-    return asset;
-    // const fileName = asset.fileName || `photo-${Date.now()}.jpg`;
+    const base64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
 
-    // STEP 1: Upload metadata to backend (MongoDB)
-    // await addPhoto(projectId, {
-    //   fileName,
-    //   url: asset.uri, // TEMP: local URI (replace with S3/Firebase uploaded URL)
-    //   caption: "Site Photo",
-    // });
+    setUploading(true);
+    setSuccess(false);
 
-    // Alert.alert("Uploaded!", "Photo sent to server.");
+    try {
+      await uploadPhoto(projectId, base64);
+      setSuccess(true);
+
+      // Hide success after delay
+      setTimeout(() => setSuccess(false), 1500);
+
+      return true;
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Failed to upload photo");
+      return false;
+    } finally {
+      setUploading(false);
+    }
   };
 
-  return { takePhoto };
+  return {
+    takePhoto,
+    uploading,
+    success,
+  };
 }

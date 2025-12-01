@@ -6,10 +6,11 @@ import StatCard from "@/components/dashboard/StatCard";
 import ProjectListCard from "@/components/dashboard/ProjectListCard";
 import { fetchContractorProjects } from "@/services/projects.service";
 import { useAuthStore } from "@/store/auth.store";
-import { useFocusEffect } from "expo-router";
-
+import { useFocusEffect, useRouter } from "expo-router";
+import { auth } from "@/lib/firebase";
 export default function Home() {
   const user = useAuthStore((s) => s.user);
+  const router = useRouter();
 
   const initials = user?.displayName
     ? user.displayName.split(" ").map((n) => n[0]).join("").toUpperCase()
@@ -27,7 +28,7 @@ export default function Home() {
           const data = await fetchContractorProjects();
           setProjects(Array.isArray(data) ? data : []);
         } catch (err) {
-          console.log("Dashboard load error:", err);
+          console.log("❌ Dashboard load error:", err);
         } finally {
           setLoading(false);
         }
@@ -36,6 +37,7 @@ export default function Home() {
       load();
     }, [])
   );
+
 
   if (loading) {
     return (
@@ -134,9 +136,9 @@ export default function Home() {
             marginBottom: 20,
           }}
         >
-          <StatCard icon="folder" label="Projects" value={String(totalProjects)} />
-          <StatCard icon="camera" label="Site Photos" value={String(totalPhotos)} />
-          <StatCard icon="image" label="Receipts" value={String(totalReceipts)} />
+          <StatCard icon="folder" label="Projects" value={String(totalProjects)} onPress={() => router.push("/projects")}/>
+          <StatCard icon="camera" label="Site Photos" value={String(totalPhotos)} onPress={() => router.push("/photos")}/>
+          <StatCard icon="image" label="Receipts" value={String(totalReceipts)} onPress={() => router.push("/receipts")}/>
         </View>
 
         {/* CURRENT PROJECTS */}
