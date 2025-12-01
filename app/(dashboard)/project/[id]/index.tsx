@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useCallback, useState } from "react";
 import {
   View,
@@ -8,16 +10,20 @@ import {
 } from "react-native";
 import { useLocalSearchParams, Link } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import MapView, { Marker } from "react-native-maps";
 import { fetchProjectById } from "@/services/projects.service";
 import { COLORS } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { usePhotoUpload } from "@/hooks/usePhotoUpload";
+import { geocodeLocation } from "@/services/geocode.service";
 
 export default function ProjectDetail() {
   const { id } = useLocalSearchParams();
   const projectId = String(id);
 
   const [project, setProject] = useState<any>(null);
+  const [coords, setCoords] = useState<any>(null);
+
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -29,9 +35,16 @@ export default function ProjectDetail() {
     useCallback(() => {
       async function load() {
         setLoading(true);
+
         try {
           const data = await fetchProjectById(projectId);
           setProject(data);
+
+          // Auto-geocode location → coordinates
+          if (data.location) {
+            const geo = await geocodeLocation(data.location);
+            setCoords(geo);
+          }
         } catch (err) {
           console.log("Failed to load project:", err);
         } finally {
@@ -56,14 +69,15 @@ export default function ProjectDetail() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120, marginTop: 20 }}>
+        
         {/* PROJECT TITLE */}
         <Text style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}>
           {project.name}
         </Text>
 
         <Text style={{ color: "#6B7280", marginTop: 4, marginBottom: 20 }}>
-          {project.location || "No address provided"}
+          {project.status || "No status available"}
         </Text>
 
         {/* QUICK STATS */}
@@ -125,9 +139,7 @@ export default function ProjectDetail() {
               marginBottom: 12,
             }}
           >
-            <Text style={{ fontWeight: "600", color: COLORS.primary }}>
-              View Photos
-            </Text>
+            <Text style={{ fontWeight: "600", color: COLORS.primary }}>View Photos</Text>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
           </TouchableOpacity>
         </Link>
@@ -143,12 +155,42 @@ export default function ProjectDetail() {
               alignItems: "center",
             }}
           >
-            <Text style={{ fontWeight: "600", color: COLORS.primary }}>
-              View Receipts
-            </Text>
+            <Text style={{ fontWeight: "600", color: COLORS.primary }}>View Receipts</Text>
             <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
           </TouchableOpacity>
         </Link>
+
+        {/* ---------------------- */}
+        {/* MAP SECTION (Auto-Geo) */}
+        {/* ---------------------- */}
+        {coords && (
+          <View
+            style={{
+              height: 250,
+              borderRadius: 14,
+              overflow: "hidden",
+              marginTop: 20,
+              backgroundColor: "#e5e7eb",
+            }}
+          >
+            <MapView
+              style={{ flex: 1 }}
+              initialRegion={{
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                latitudeDelta: 0.5,
+                longitudeDelta: 0.5,
+              }}
+            >
+              <Marker
+                coordinate={coords}
+                title={project.name}
+                description={project.location}
+              />
+            </MapView>
+          </View>
+        )}
+
       </ScrollView>
 
       {/* FLOATING CAMERA BUTTON */}
@@ -165,10 +207,16 @@ export default function ProjectDetail() {
               setSuccess(true);
               setTimeout(() => setSuccess(false), 1000);
 
-              // refresh project
+              // Refresh project
               setLoading(true);
               const data = await fetchProjectById(projectId);
               setProject(data);
+
+              if (data.location) {
+                const geo = await geocodeLocation(data.location);
+                setCoords(geo);
+              }
+
               setLoading(false);
             }
           } catch (err) {
@@ -195,7 +243,6 @@ export default function ProjectDetail() {
       >
         <Ionicons name="camera" size={30} color="#fff" />
       </TouchableOpacity>
-
 
       {/* UPLOADING OVERLAY */}
       {uploading && (
@@ -242,7 +289,6 @@ export default function ProjectDetail() {
           </View>
         </View>
       )}
-
     </View>
   );
 }
