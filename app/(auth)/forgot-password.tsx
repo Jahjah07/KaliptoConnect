@@ -41,11 +41,7 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       await sendPasswordReset(email);
-      Alert.alert(
-        "Check your email",
-        "We've sent you instructions to reset your password."
-      );
-      router.push("/login");
+      router.push("/reset-success");
     } catch (err: any) {
       Alert.alert("Error", err.message || "Unable to send reset email");
     } finally {
