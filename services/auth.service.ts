@@ -1,13 +1,13 @@
 // services/auth.service.ts
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile,
-  signOut
-} from "firebase/auth";
-
 import { auth } from "@/lib/firebase";
 import { createContractor } from "@/services/contractor.service";
+import {
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail as firebaseSendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut,
+  updateProfile
+} from "firebase/auth";
 
 export async function registerWithEmail(
   email: string,
@@ -31,6 +31,16 @@ export async function registerWithEmail(
 
 export async function loginWithEmail(email: string, password: string) {
   return await signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function sendPasswordReset(email: string) {
+  try {
+    await firebaseSendPasswordResetEmail(auth, email);
+    return true;
+  } catch (error: any) {
+    console.log("Password reset error:", error);
+    throw new Error(error.message || "Failed to send reset email");
+  }
 }
 
 export async function logout() {
