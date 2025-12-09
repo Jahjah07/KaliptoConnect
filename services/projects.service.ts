@@ -13,27 +13,17 @@ const API_URL =
   Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ||
   "https://crm-system-gray.vercel.app/api";
 
-// Log API URL immediately
-console.log("📡 [ProjectsService] API URL:", API_URL);
-
 /* ---------------------------------------
    🔹 Secure Token Getter
 ----------------------------------------*/
 async function getToken(): Promise<string> {
   const user = auth.currentUser;
 
-  console.log("👤 [ProjectsService] Current User:", user?.email ?? "NO USER");
-
   if (!user) {
     throw new Error("Not authenticated");
   }
 
   const token = await user.getIdToken();
-
-  console.log(
-    "🔐 [ProjectsService] Firebase ID Token:",
-    token.substring(0, 15) + "...(truncated)"
-  );
 
   return token;
 }
@@ -80,7 +70,6 @@ export async function fetchProjectById(id: string) {
 
   if (!res.ok) {
     const text = await res.text();
-    console.log("❌ [ProjectsService] Project detail error:", text);
     throw new Error("Not authorized to view this project");
   }
 

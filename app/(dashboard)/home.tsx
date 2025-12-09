@@ -1,13 +1,13 @@
-import React, { useCallback, useState } from "react";
-import { View, Text, ScrollView, ActivityIndicator } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS } from "@/constants/colors";
-import StatCard from "@/components/dashboard/StatCard";
 import ProjectListCard from "@/components/dashboard/ProjectListCard";
+import StatCard from "@/components/dashboard/StatCard";
+import Skeleton from "@/components/ui/Skeleton";
+import { COLORS } from "@/constants/colors";
 import { fetchContractorProjects } from "@/services/projects.service";
 import { useAuthStore } from "@/store/auth.store";
 import { useFocusEffect, useRouter } from "expo-router";
-import { auth } from "@/lib/firebase";
+import React, { useCallback, useState } from "react";
+import { ScrollView, Text, View } from "react-native";
+
 export default function Home() {
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
@@ -41,11 +41,82 @@ export default function Home() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: COLORS.background }}
+        contentContainerStyle={{ paddingBottom: 80 }}
+      >
+        {/* HEADER SKELETON */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 60, paddingBottom: 30 }}>
+          <Skeleton width={120} height={20} />
+          <Skeleton width={180} height={28} style={{ marginTop: 10 }} />
+          <Skeleton width={140} height={18} style={{ marginTop: 6 }} />
+
+          <View
+            style={{
+              position: "absolute",
+              right: 20,
+              top: 60,
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              backgroundColor: "#E5E7EB",
+            }}
+          />
+        </View>
+
+        {/* WHITE BODY */}
+        <View
+          style={{
+            backgroundColor: "#F7F9FC",
+            borderTopLeftRadius: 32,
+            borderTopRightRadius: 32,
+            paddingHorizontal: 20,
+            paddingTop: 24,
+            marginTop: -20,
+          }}
+        >
+          {/* STATS CARDS SKELETON */}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginBottom: 20,
+            }}
+          >
+            <Skeleton width={"30%"} height={90} radius={16} />
+            <Skeleton width={"30%"} height={90} radius={16} />
+            <Skeleton width={"30%"} height={90} radius={16} />
+          </View>
+
+          {/* CURRENT PROJECTS TITLE */}
+          <Skeleton width={160} height={24} style={{ marginBottom: 12 }} />
+
+          {/* 3 Cards */}
+          <Skeleton width={"100%"} height={80} radius={16} style={{ marginBottom: 12 }} />
+          <Skeleton width={"100%"} height={80} radius={16} style={{ marginBottom: 12 }} />
+          <Skeleton width={"100%"} height={80} radius={16} style={{ marginBottom: 12 }} />
+
+          {/* RECENT PROJECTS TITLE */}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginTop: 30,
+              marginBottom: 10,
+            }}
+          >
+            <Skeleton width={150} height={24} />
+            <Skeleton width={80} height={20} />
+          </View>
+
+          {/* 2 Cards */}
+          <Skeleton width={"100%"} height={80} radius={16} style={{ marginBottom: 12 }} />
+          <Skeleton width={"100%"} height={80} radius={16} />
+        </View>
+      </ScrollView>
     );
   }
+
 
   // 📌 TOTALS
   const totalProjects = projects.length;
@@ -136,9 +207,9 @@ export default function Home() {
             marginBottom: 20,
           }}
         >
-          <StatCard icon="folder" label="Projects" value={String(totalProjects)} onPress={() => router.push("/projects")}/>
-          <StatCard icon="camera" label="Site Photos" value={String(totalPhotos)} onPress={() => router.push("/photos")}/>
-          <StatCard icon="image" label="Receipts" value={String(totalReceipts)} onPress={() => router.push("/receipts")}/>
+          <StatCard icon="folder" label="Projects" value={String(totalProjects)} onPress={() => router.push("/(dashboard)/project")}/>
+          <StatCard icon="camera" label="Site Photos" value={String(totalPhotos)} onPress={() => router.push("/(dashboard)/photos")}/>
+          <StatCard icon="image" label="Receipts" value={String(totalReceipts)} onPress={() => router.push("/(dashboard)/receipts")}/>
         </View>
 
         {/* CURRENT PROJECTS */}

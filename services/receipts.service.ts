@@ -57,17 +57,6 @@ export async function fetchProjectReceipts(projectId: string) {
   return res.data; // array of receipts
 }
 
-/* -----------------------------------
-   Fetch ALL receipts across ALL projects
-   Format Expected:
-   [
-     {
-       projectId: "p1",
-       projectName: "Project Alpha",
-       receipts: [ ... ]
-     }
-   ]
------------------------------------- */
 export async function fetchAllReceipts() {
   const auth = await authHeader();
 

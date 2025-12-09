@@ -1,21 +1,20 @@
 "use client";
 
+import { COLORS } from "@/constants/colors";
+import { geocodeLocation } from "@/services/geocode.service";
+import { fetchProjectById } from "@/services/projects.service";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
+import { Link, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useLocalSearchParams, Link } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
 import MapView, { Marker } from "react-native-maps";
-import { fetchProjectById } from "@/services/projects.service";
-import { COLORS } from "@/constants/colors";
-import { Ionicons } from "@expo/vector-icons";
-import { usePhotoUpload } from "@/hooks/usePhotoUpload";
-import { geocodeLocation } from "@/services/geocode.service";
 
 export default function ProjectDetail() {
   const { id } = useLocalSearchParams();
@@ -25,10 +24,6 @@ export default function ProjectDetail() {
   const [coords, setCoords] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  const { takePhoto } = usePhotoUpload(projectId);
 
   // 🔄 Auto-refresh project data
   useFocusEffect(
@@ -69,7 +64,7 @@ export default function ProjectDetail() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120, marginTop: 20 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120, marginTop: 30 }}>
         
         {/* PROJECT TITLE */}
         <Text style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}>
@@ -192,103 +187,6 @@ export default function ProjectDetail() {
         )}
 
       </ScrollView>
-
-      {/* FLOATING CAMERA BUTTON */}
-      <TouchableOpacity
-        onPress={async () => {
-          try {
-            setUploading(true);
-
-            const done = await takePhoto();
-
-            setUploading(false);
-
-            if (done) {
-              setSuccess(true);
-              setTimeout(() => setSuccess(false), 1000);
-
-              // Refresh project
-              setLoading(true);
-              const data = await fetchProjectById(projectId);
-              setProject(data);
-
-              if (data.location) {
-                const geo = await geocodeLocation(data.location);
-                setCoords(geo);
-              }
-
-              setLoading(false);
-            }
-          } catch (err) {
-            console.log("Upload Error:", err);
-            setUploading(false);
-          }
-        }}
-        style={{
-          position: "absolute",
-          bottom: 30,
-          right: 20,
-          backgroundColor: COLORS.primary,
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          justifyContent: "center",
-          alignItems: "center",
-          shadowColor: "#000",
-          shadowOpacity: 0.25,
-          shadowRadius: 6,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 8,
-        }}
-      >
-        <Ionicons name="camera" size={30} color="#fff" />
-      </TouchableOpacity>
-
-      {/* UPLOADING OVERLAY */}
-      {uploading && (
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 999,
-          }}
-        >
-          <ActivityIndicator size="large" color="#fff" />
-          <Text style={{ color: "#fff", marginTop: 10 }}>Uploading photo...</Text>
-        </View>
-      )}
-
-      {/* SUCCESS CHECKMARK */}
-      {success && (
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 999,
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "rgba(0,0,0,0.7)",
-              padding: 30,
-              borderRadius: 50,
-            }}
-          >
-            <Ionicons name="checkmark-circle" size={80} color="#4ade80" />
-          </View>
-        </View>
-      )}
     </View>
   );
 }

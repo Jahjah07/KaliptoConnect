@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, ActivityIndicator } from "react-native";
+import ProjectListCard from "@/components/dashboard/ProjectListCard";
 import { COLORS } from "@/constants/colors";
 import { fetchContractorProjects } from "@/services/projects.service";
-import ProjectListCard from "@/components/dashboard/ProjectListCard";
 import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 
 export default function ProjectsScreen() {
   const [projects, setProjects] = useState<any[]>([]);
@@ -27,7 +27,7 @@ export default function ProjectsScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: COLORS.background }}
-      contentContainerStyle={{ padding: 20, paddingBottom: 60 }}
+      contentContainerStyle={{ padding: 20, paddingBottom: 60, paddingTop: 60 }}
     >
       {/* HEADER */}
       <View

@@ -1,8 +1,7 @@
-import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { useAuthStore } from "@/store/auth.store";
-import { Redirect } from "expo-router";
 import { COLORS } from "@/constants/colors";
+import { useAuthStore } from "@/store/auth.store";
+import { Ionicons } from "@expo/vector-icons";
+import { Redirect, Tabs } from "expo-router";
 
 export default function DashboardLayout() {
   const user = useAuthStore((s) => s.user);
@@ -36,7 +35,7 @@ export default function DashboardLayout() {
       />
 
       <Tabs.Screen
-        name="projects"
+        name="project"
         options={{
           title: "Projects",
           tabBarIcon: ({ color }) => (
@@ -66,7 +65,7 @@ export default function DashboardLayout() {
       />
 
       <Tabs.Screen
-        name="profile/index"
+        name="profile"
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) => (
@@ -75,9 +74,6 @@ export default function DashboardLayout() {
         }}
       />
       <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="project/[id]/index" options={{ href: null }}/>
-      <Tabs.Screen name="profile/edit" options={{ href: null }}/>
-      <Tabs.Screen name="profile/documents" options={{ href: null }}/>
     </Tabs>
   );
 }
