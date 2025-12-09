@@ -9,6 +9,7 @@ import {
   RefreshControl,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -33,7 +34,7 @@ export default function ReceiptsScreen() {
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
+  const [search, setSearch] = useState("");
   async function load() {
     try {
       setLoading(true);
@@ -57,10 +58,21 @@ export default function ReceiptsScreen() {
   }, []);
 
   // Flatten receipts if showing ALL
-  const filteredReceipts: Receipt[] =
+  const filteredReceipts = (
     projectFilter === "all"
       ? all.flatMap((p) => p.receipts)
-      : all.find((p) => p.projectId === projectFilter)?.receipts ?? [];
+      : all.find((p) => p.projectId === projectFilter)?.receipts ?? []
+  ).filter((r) => {
+    const filename = r.imageUrl?.split("/").pop()?.toLowerCase() ?? "";
+    const searchTxt = search.toLowerCase();
+
+    return (
+      r.store.toLowerCase().includes(searchTxt) ||
+      r.amount.toString().includes(searchTxt) ||
+      r.date.toLowerCase().includes(searchTxt) ||
+      filename.includes(searchTxt)
+    );
+  });
 
   // Loading spinner
   if (loading) {
@@ -92,29 +104,53 @@ export default function ReceiptsScreen() {
         </Text>
       </View>
 
-      {/* FILTER CHIPS */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ paddingLeft: 20, marginVertical: 10 }}
+      {/* SEARCH BAR */}
+      <View
+        style={{
+          backgroundColor: "#F1F5F9",
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          borderRadius: 12,
+          flexDirection: "row",
+          alignItems: "center",
+          marginHorizontal: 20,
+          marginTop: 10,
+        }}
       >
-        {/* ALL PROJECTS */}
-        <FilterChip
-          label="All Projects"
-          active={projectFilter === "all"}
-          onPress={() => setProjectFilter("all")}
+        <Ionicons name="search-outline" size={20} color="#6B7280" />
+        <TextInput
+          placeholder="Search receipts..."
+          value={search}
+          onChangeText={setSearch}
+          style={{ flex: 1, marginLeft: 10 }}
         />
+      </View>
 
-        {/* INDIVIDUAL PROJECT TAGS */}
-        {all.map((p) => (
+      {/* FILTER CHIPS */}
+      <View style={{ paddingVertical: 10 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingLeft: 20 }}
+        >
+          {/* ALL PROJECTS */}
           <FilterChip
-            key={p.projectId}
-            label={p.projectName}
-            active={projectFilter === p.projectId}
-            onPress={() => setProjectFilter(p.projectId)}
+            label="All Projects"
+            active={projectFilter === "all"}
+            onPress={() => setProjectFilter("all")}
           />
-        ))}
-      </ScrollView>
+
+          {/* INDIVIDUAL PROJECT TAGS */}
+          {all.map((p) => (
+            <FilterChip
+              key={p.projectId}
+              label={p.projectName}
+              active={projectFilter === p.projectId}
+              onPress={() => setProjectFilter(p.projectId)}
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       {/* CONTENT */}
       {filteredReceipts.length === 0 ? (
@@ -163,6 +199,7 @@ function FilterChip({
     <TouchableOpacity
       onPress={onPress}
       style={{
+        alignSelf: "flex-start",
         paddingVertical: 6,
         paddingHorizontal: 14,
         backgroundColor: active ? COLORS.primary : "#E5E7EB",
@@ -202,61 +239,59 @@ function ReceiptCard({ receipt }: { receipt: Receipt }) {
     <View
       style={{
         backgroundColor: "#fff",
-        padding: 16,
-        borderRadius: 16,
-        marginBottom: 14,
+        padding: 18,
+        borderRadius: 18,
+        marginBottom: 16,
         shadowColor: "#000",
         shadowOpacity: 0.06,
         shadowRadius: 4,
         shadowOffset: { width: 0, height: 2 },
+        flexDirection: "row",
+        alignItems: "center",
       }}
     >
-      <View style={{ flexDirection: "row" }}>
-        {/* IMAGE / PLACEHOLDER */}
-        {imageUrl ? (
-          <Animated.View
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: 12,
-              overflow: "hidden",
-              marginRight: 12,
-              opacity,
-              backgroundColor: "#f1f1f1",
-            }}
-          >
-            <Image
-              source={{ uri: imageUrl }}
-              onLoad={onLoad}
-              resizeMode="cover"
-              style={{ width: "100%", height: "100%" }}
-            />
-          </Animated.View>
-        ) : (
-          <View
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: 12,
-              backgroundColor: "#E0E7FF",
-              justifyContent: "center",
-              alignItems: "center",
-              marginRight: 12,
-            }}
-          >
-            <Ionicons name="receipt-outline" size={26} color="#4A63FF" />
-          </View>
-        )}
-
-        {/* DETAILS */}
-        <View style={{ flex: 1, justifyContent: "center" }}>
-          <Text style={{ fontWeight: "700", fontSize: 16, color: "#111" }}>
-            {store}
-          </Text>
-          <Text style={{ color: "#6B7280", marginTop: 2 }}>
-            ${amount} • {date}
-          </Text>
+      {imageUrl ? (
+        <Animated.View
+          style={{
+            width: 70,
+            height: 70,
+            borderRadius: 14,
+            overflow: "hidden",
+            marginRight: 14,
+            opacity,
+            backgroundColor: "#f1f1f1",
+          }}
+        >
+          <Image
+            source={{ uri: imageUrl }}
+            onLoad={onLoad}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        </Animated.View>
+      ) : (
+        <View
+          style={{
+            width: 70,
+            height: 70,
+            borderRadius: 14,
+            backgroundColor: COLORS.primary + "18",
+            justifyContent: "center",
+            alignItems: "center",
+            marginRight: 14,
+          }}
+        >
+          <Ionicons name="receipt-outline" size={30} color={COLORS.primary} />
         </View>
+      )}
+
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: "#111" }}>
+          {store}
+        </Text>
+        <Text style={{ color: "#6B7280", marginTop: 4 }}>
+          ${amount} — {date}
+        </Text>
       </View>
     </View>
   );

@@ -1,21 +1,24 @@
-import React, { useEffect, useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  RefreshControl,
-  Animated,
-} from "react-native";
 import { COLORS } from "@/constants/colors";
 import { fetchAllPhotos } from "@/services/photos.service";
-import { ProjectPhotosGroup, Photo } from "@/types/photo";
+import { Photo, ProjectPhotosGroup } from "@/types/photo";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  Image,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function PhotosScreen() {
   const [all, setAll] = useState<ProjectPhotosGroup[]>([]);
-  const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [projectFilter, setProjectFilter] = useState("all");
+  const [search, setSearch] = useState(""); // 🔍 search input
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -41,13 +44,19 @@ export default function PhotosScreen() {
     load();
   }, []);
 
-  // Flatten all photos if filter = "all"
-  const filteredPhotos: Photo[] =
+  // 1️⃣ Filter by project
+  const filteredByProject: Photo[] =
     projectFilter === "all"
       ? all.flatMap((p) => p.photos)
       : all.find((p) => p.projectId === projectFilter)?.photos ?? [];
 
-  // Show loading spinner
+  // 2️⃣ Filter by search
+  const filteredPhotos = filteredByProject.filter((photo) => {
+    const filename = photo.url.split("/").pop()?.toLowerCase() ?? "";
+    return filename.includes(search.toLowerCase());
+  });
+
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -59,45 +68,78 @@ export default function PhotosScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       {/* HEADER */}
-      <View
-        style={{
-          paddingHorizontal: 20,
-          paddingTop: 60,
-          paddingBottom: 10,
-        }}
-      >
+      <View style={{ paddingHorizontal: 24, paddingTop: 60, paddingBottom: 10 }}>
         <Text style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}>
           Site Photos
         </Text>
 
-        <Text style={{ color: COLORS.primary, marginTop: 4 }}>
+        <Text style={{ color: COLORS.primary, marginTop: 2 }}>
           {filteredPhotos.length} photos
         </Text>
+
+        {/* Icon */}
+        <View
+          style={{
+            position: "absolute",
+            right: 24,
+            top: 60,
+            width: 46,
+            height: 46,
+            borderRadius: 23,
+            backgroundColor: COLORS.primary,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Ionicons name="camera" size={24} color="#fff" />
+        </View>
+      </View>
+
+      {/* SEARCH BAR */}
+      <View
+        style={{
+          backgroundColor: "#F1F5F9",
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          borderRadius: 12,
+          flexDirection: "row",
+          alignItems: "center",
+          marginHorizontal: 24,
+          marginTop: 10,
+        }}
+      >
+        <Ionicons name="search-outline" size={20} color="#6B7280" />
+        <TextInput
+          placeholder="Search photos..."
+          value={search}
+          onChangeText={setSearch}
+          style={{ marginLeft: 10, flex: 1 }}
+        />
       </View>
 
       {/* FILTER CHIPS */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ paddingLeft: 20, marginVertical: 10 }}
-      >
-        {/* ALL PROJECTS */}
-        <FilterChip
-          label="All Projects"
-          active={projectFilter === "all"}
-          onPress={() => setProjectFilter("all")}
-        />
-
-        {/* INDIVIDUAL PROJECT TAGS */}
-        {all.map((p) => (
+      <View style={{ paddingVertical: 10 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingLeft: 20 }}
+        >
           <FilterChip
-            key={p.projectId}
-            label={p.projectName}
-            active={projectFilter === p.projectId}
-            onPress={() => setProjectFilter(p.projectId)}
+            label="All Projects"
+            active={projectFilter === "all"}
+            onPress={() => setProjectFilter("all")}
           />
-        ))}
-      </ScrollView>
+
+          {all.map((p) => (
+            <FilterChip
+              key={p.projectId}
+              label={p.projectName}
+              active={projectFilter === p.projectId}
+              onPress={() => setProjectFilter(p.projectId)}
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       {/* EMPTY STATE */}
       {filteredPhotos.length === 0 ? (
@@ -108,15 +150,19 @@ export default function PhotosScreen() {
             marginTop: 80,
           }}
         >
-          <Text style={{ fontSize: 18, color: "#6B7280" }}>No photos available</Text>
+          <Ionicons name="image-outline" size={50} color="#9CA3AF" />
+          <Text style={{ fontSize: 18, color: "#6B7280", marginTop: 10 }}>
+            No photos found
+          </Text>
         </View>
       ) : (
         <ScrollView
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
         >
+          {/* Photo Grid */}
           <View
             style={{
               flexDirection: "row",
@@ -150,6 +196,7 @@ function FilterChip({
     <TouchableOpacity
       onPress={onPress}
       style={{
+        alignSelf: "flex-start",
         paddingVertical: 6,
         paddingHorizontal: 14,
         backgroundColor: active ? COLORS.primary : "#E5E7EB",

@@ -1,17 +1,18 @@
 // app/(dashboard)/profile/documents.tsx
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
+import DocumentUploadCard from "@/components/documents/DocumentUploadCard";
 import { COLORS } from "@/constants/colors";
 import { getContractor, updateContractorDocument } from "@/services/contractor.service";
-import DocumentUploadCard from "@/components/documents/DocumentUploadCard";
-import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import Constants from "expo-constants";
+import * as ImagePicker from "expo-image-picker";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  View
+} from "react-native";
+import Toast from "react-native-toast-message";
 
 export default function DocumentsScreen() {
   const [contractor, setContractor] = useState<any>(null);
@@ -53,8 +54,60 @@ export default function DocumentsScreen() {
 
     const uri = res.assets[0].uri;
 
-    const updated = await updateContractorDocument(field, uri);
-    setContractor(updated);
+    try {
+      const safeName = contractor.name
+        ? contractor.name.replace(/[^a-zA-Z0-9]/g, "_")
+        : "unknown";
+
+      const formData = new FormData();
+      formData.append("file", {
+        uri,
+        type: "image/jpeg",
+        name: `${field}.jpg`,
+      } as any);
+
+      formData.append(
+        "upload_preset",
+        Constants.expoConfig?.extra?.CLOUDINARY_UPLOAD_PRESET
+      );
+
+      // 👇 Save under contractors/{name}
+      formData.append("folder", `contractors/${safeName}`);
+
+      const cloudinaryRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${Constants.expoConfig?.extra?.CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await cloudinaryRes.json();
+
+      if (!data.secure_url) {
+        Toast.show({
+          type: "error",
+          text1: "Upload Failed",
+          text2: "Cloudinary did not return a valid URL.",
+        });
+        return;
+      }
+
+      const updated = await updateContractorDocument(field, data.secure_url);
+      setContractor(updated);
+      Toast.show({
+        type: "success",
+        text1: "Document Uploaded",
+        text2: `${field} has been updated successfully`,
+      });
+    } catch (err) {
+      console.log("❌ Upload failed:", err);
+      Toast.show({
+        type: "error",
+        text1: "Upload Error",
+        text2: "Something went wrong. Try again.",
+      });
+    }
   };
 
   // ---------------------------
@@ -83,79 +136,134 @@ export default function DocumentsScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, padding: 20, backgroundColor: COLORS.background }}
-      contentContainerStyle={{ paddingBottom: 100 }}
+      style={{ flex: 1, backgroundColor: COLORS.background, paddingTop: 50 }}
+      contentContainerStyle={{ paddingBottom: 120 }}
     >
-      <Text
+      {/* HEADER */}
+      <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+        <Text
+          style={{
+            fontSize: 28,
+            fontWeight: "800",
+            color: COLORS.primaryDark,
+            letterSpacing: -0.5,
+          }}
+        >
+          Documents
+        </Text>
+
+        <Text style={{ marginTop: 4, color: "#6B7280" }}>
+          Upload your required contractor documents.
+        </Text>
+      </View>
+
+      {/* DOCUMENT SECTION */}
+      <View
         style={{
-          fontSize: 26,
-          fontWeight: "700",
-          color: COLORS.primaryDark,
-          marginBottom: 20,
+          backgroundColor: "#fff",
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          padding: 20,
+          shadowColor: "#000",
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: -2 },
         }}
       >
-        Documents
-      </Text>
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "700",
+            marginBottom: 16,
+            color: COLORS.primaryDark,
+          }}
+        >
+          Required Documents
+        </Text>
 
-      {/* 1. ABN */}
-      <DocumentUploadCard
-        title="ABN"
-        value={contractor.abn}
-        expiry={contractor.abnExpiry}
-        onUpload={() => handleUpload("abn")}
-        onExpiryChange={() => {
-          setSelectedField("abn");
-          setShowDatePicker(true);
-        }}
-      />
+        {/* ABN */}
+        <DocumentUploadCard
+          title="ABN"
+          subtitle="Registered Australian Business Number"
+          icon="briefcase-outline"
+          value={contractor.abn}
+          expiry={contractor.abnExpiry}
+          statusColor={!contractor.abn ? COLORS.error : COLORS.primary}
+          onUpload={() => handleUpload("abn")}
+          onExpiryChange={() => {
+            setSelectedField("abn");
+            setShowDatePicker(true);
+          }}
+        />
 
-      {/* 2. Contractor License */}
-      <DocumentUploadCard
-        title="Contractor License"
-        value={contractor.contractorLicense}
-        expiry={contractor.contractorLicenseExpiry}
-        onUpload={() => handleUpload("contractorLicense")}
-        onExpiryChange={() => {
-          setSelectedField("contractorLicense");
-          setShowDatePicker(true);
-        }}
-      />
+        {/* Contractor License */}
+        <DocumentUploadCard
+          title="Contractor License"
+          subtitle="Your professional trade license"
+          icon="shield-checkmark-outline"
+          value={contractor.contractorLicense}
+          expiry={contractor.contractorLicenseExpiry}
+          statusColor={
+            !contractor.contractorLicense ? COLORS.error : COLORS.primary
+          }
+          onUpload={() => handleUpload("contractorLicense")}
+          onExpiryChange={() => {
+            setSelectedField("contractorLicense");
+            setShowDatePicker(true);
+          }}
+        />
 
-      {/* 3. Driver's License */}
-      <DocumentUploadCard
-        title="Driver's License"
-        value={contractor.driversLicense}
-        expiry={contractor.driversLicenseExpiry}
-        onUpload={() => handleUpload("driversLicense")}
-        onExpiryChange={() => {
-          setSelectedField("driversLicense");
-          setShowDatePicker(true);
-        }}
-      />
+        {/* Driver's License */}
+        <DocumentUploadCard
+          title="Driver's License"
+          subtitle="Government-issued ID"
+          icon="card-outline"
+          value={contractor.driversLicense}
+          expiry={contractor.driversLicenseExpiry}
+          statusColor={
+            !contractor.driversLicense ? COLORS.error : COLORS.primary
+          }
+          onUpload={() => handleUpload("driversLicense")}
+          onExpiryChange={() => {
+            setSelectedField("driversLicense");
+            setShowDatePicker(true);
+          }}
+        />
 
-      {/* 4. Public Liability */}
-      <DocumentUploadCard
-        title="Public Liability"
-        value={contractor.publicLiabilityCopy}
-        expiry={contractor.publicLiabilityExpiry}
-        onUpload={() => handleUpload("publicLiabilityCopy")}
-        onExpiryChange={() => {
-          setSelectedField("publicLiabilityCopy");
-          setShowDatePicker(true);
-        }}
-      />
+        {/* Public Liability */}
+        <DocumentUploadCard
+          title="Public Liability Insurance"
+          subtitle="Proof of insurance coverage"
+          icon="document-lock-outline"
+          value={contractor.publicLiabilityCopy}
+          expiry={contractor.publicLiabilityExpiry}
+          statusColor={
+            !contractor.publicLiabilityCopy ? COLORS.error : COLORS.primary
+          }
+          onUpload={() => handleUpload("publicLiabilityCopy")}
+          onExpiryChange={() => {
+            setSelectedField("publicLiabilityCopy");
+            setShowDatePicker(true);
+          }}
+        />
 
-      {/* 5. Workers Insurance */}
-      <DocumentUploadCard
-        title="Workers Insurance"
-        value={contractor.workersInsuranceCopy}
-        expiry={contractor.workersInsuranceExpiry}
-        onUpload={() => handleUpload("workersInsuranceCopy")}
-        onExpiryChange={() => {
-          setSelectedField("workersInsuranceCopy");
-          setShowDatePicker(true);
-        }}
-      />
+        {/* Workers Insurance */}
+        <DocumentUploadCard
+          title="Workers Insurance"
+          subtitle="Workers compensation coverage"
+          icon="document-text-outline"
+          value={contractor.workersInsuranceCopy}
+          expiry={contractor.workersInsuranceExpiry}
+          statusColor={
+            !contractor.workersInsuranceCopy ? COLORS.error : COLORS.primary
+          }
+          onUpload={() => handleUpload("workersInsuranceCopy")}
+          onExpiryChange={() => {
+            setSelectedField("workersInsuranceCopy");
+            setShowDatePicker(true);
+          }}
+        />
+      </View>
 
       {/* DATE PICKER */}
       {showDatePicker && (

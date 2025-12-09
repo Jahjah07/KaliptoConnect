@@ -5,11 +5,43 @@ const API_URL =
   Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ||
   "https://crm-system-gray.vercel.app/api";
 
-/**
- * Helper to always send Firebase ID token
- */
+/* ----------------------------------------
+🔒 WAIT FOR AUTH RESTORE
+----------------------------------------- */
+function waitForAuth(): Promise<any> {
+  return new Promise((resolve) => {
+    const unsub = auth.onAuthStateChanged((user) => {
+      if (user) {
+        unsub();
+        resolve(user);
+      }
+    });
+  });
+}
+
+/* ----------------------------------------
+🔒 GET FRESH TOKEN SAFE
+----------------------------------------- */
+async function getValidToken() {
+  let user = auth.currentUser;
+
+  // If no user yet, wait for Firebase to restore session
+  if (!user) {
+    user = await waitForAuth();
+  }
+
+  // Get fresh token
+  const token = await user!.getIdToken(true);
+
+  if (!token) throw new Error("Unable to get Firebase token");
+  return token;
+}
+
+/* ----------------------------------------
+🔒 ALWAYS SEND VALID HEADERS
+----------------------------------------- */
 async function authHeaders() {
-  const token = await auth.currentUser?.getIdToken(true); // force refresh
+  const token = await getValidToken();
   return {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
@@ -17,102 +49,79 @@ async function authHeaders() {
 }
 
 /* ----------------------------------------
-🔹 1. CREATE CONTRACTOR (POST)
+🔁 UNIVERSAL FETCH WRAPPER WITH RETRY
 ----------------------------------------- */
-export async function createContractor(payload: {
-  name: string;
-  email: string;
-}) {
-  const res = await fetch(`${API_URL}/mobile/contractor`, {
+async function secureFetch(url: string, options: any = {}, retry = true) {
+  let res = await fetch(url, options);
+
+  // If token expired or invalid → REFRESH once then retry automatically
+  if (res.status === 401 && retry) {
+    console.log("🔄 Retrying API call with new token...");
+    const newHeaders = await authHeaders();
+    res = await fetch(url, { ...options, headers: newHeaders });
+  }
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.log("❌ API Error:", err);
+    throw new Error(err);
+  }
+
+  return res.json();
+}
+
+/* ----------------------------------------
+1. CREATE CONTRACTOR
+----------------------------------------- */
+export async function createContractor(payload: { name: string; email: string }) {
+  return secureFetch(`${API_URL}/mobile/contractor`, {
     method: "POST",
     headers: await authHeaders(),
     body: JSON.stringify(payload),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    console.log("❌ Create contractor:", err);
-    throw new Error(err);
-  }
-
-  return res.json();
 }
 
 /* ----------------------------------------
-🔹 2. GET CONTRACTOR PROFILE (GET)
+2. GET CONTRACTOR
 ----------------------------------------- */
 export async function getContractor() {
-  const res = await fetch(`${API_URL}/mobile/contractor`, {
+  return secureFetch(`${API_URL}/mobile/contractor`, {
     headers: await authHeaders(),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    console.log("❌ Get contractor:", err);
-    throw new Error(err);
-  }
-
-  return res.json();
 }
 
 /* ----------------------------------------
-🔹 3. UPDATE PROFILE (PUT)
+3. UPDATE PROFILE
 ----------------------------------------- */
-export async function updateContractorProfile(
-  updates: Record<string, any>
-) {
-  const res = await fetch(`${API_URL}/mobile/contractor/update`, {
+export async function updateContractorProfile(updates: Record<string, any>) {
+  return secureFetch(`${API_URL}/mobile/contractor/update`, {
     method: "PUT",
     headers: await authHeaders(),
     body: JSON.stringify(updates),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    console.log("❌ Update profile:", err);
-    throw new Error(err);
-  }
-
-  return res.json();
 }
 
 /* ----------------------------------------
-🔹 4. UPDATE DOCUMENT (PUT)
+4. UPDATE DOCUMENT
 ----------------------------------------- */
 export async function updateContractorDocument(
   field: string,
   fileUrl: string,
   expiry?: string
 ) {
-  const res = await fetch(`${API_URL}/mobile/contractor/documents`, {
+  return secureFetch(`${API_URL}/mobile/contractor/documents`, {
     method: "PUT",
     headers: await authHeaders(),
     body: JSON.stringify({ field, fileUrl, expiry }),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    console.log("❌ Update document:", err);
-    throw new Error(err);
-  }
-
-  return res.json();
 }
 
 /* ----------------------------------------
-🔹 5. DELETE ACCOUNT (DELETE)
+5. DELETE ACCOUNT
 ----------------------------------------- */
 export async function deleteContractor() {
-  const res = await fetch(`${API_URL}/mobile/contractor/delete`, {
+  return secureFetch(`${API_URL}/mobile/contractor/delete`, {
     method: "DELETE",
     headers: await authHeaders(),
   });
-
-  if (!res.ok) {
-    const err = await res.text();
-    console.log("❌ Delete contractor:", err);
-    throw new Error(err);
-  }
-
-  return res.json();
 }

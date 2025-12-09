@@ -1,8 +1,8 @@
-import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/colors";
+import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
+import React from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 
 interface Props {
   id: string;
@@ -11,7 +11,15 @@ interface Props {
   status?: string;
 }
 
+const statusColors: any = {
+  Active: "#22C55E",
+  Pending: "#F59E0B",
+  Completed: "#3B82F6",
+};
+
 export default function ProjectListCard({ id, name, address, status }: Props) {
+  const badgeColor = statusColors[status ?? "Pending"] || "#6B7280";
+
   return (
     <Link href={`/(dashboard)/project/${id}`} asChild>
       <TouchableOpacity
@@ -19,7 +27,7 @@ export default function ProjectListCard({ id, name, address, status }: Props) {
           backgroundColor: "#fff",
           padding: 18,
           borderRadius: 14,
-          marginBottom: 14,
+          marginBottom: 16,
           shadowOpacity: 0.05,
           shadowRadius: 6,
           shadowOffset: { height: 2, width: 0 },
@@ -27,28 +35,64 @@ export default function ProjectListCard({ id, name, address, status }: Props) {
           alignItems: "center",
         }}
       >
-        {/* Icon */}
+        {/* Left Icon */}
         <View
           style={{
-            width: 46,
-            height: 46,
-            borderRadius: 12,
-            backgroundColor: "#E0E7FF",
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            backgroundColor: COLORS.primary + "15",
             justifyContent: "center",
             alignItems: "center",
           }}
         >
-          <Ionicons name="folder" size={22} color={COLORS.primary} />
+          <Ionicons name="folder-outline" size={22} color={COLORS.primary} />
         </View>
 
-        {/* Text */}
-        <View style={{ marginLeft: 14 }}>
-          <Text style={{ fontWeight: "700", color: "#111", fontSize: 16 }}>
+        {/* Right Content */}
+        <View style={{ marginLeft: 14, flex: 1 }}>
+          {/* Project Name */}
+          <Text
+            style={{
+              fontWeight: "700",
+              color: "#111",
+              fontSize: 16,
+              marginBottom: 4,
+            }}
+          >
             {name}
           </Text>
-          <Text style={{ color: "#6B7280", marginTop: 2 }}>
-            {status || "No status"}
-          </Text>
+
+          {/* Address (if any) */}
+          {address && (
+            <Text style={{ color: "#6B7280", fontSize: 13, marginBottom: 4 }}>
+              {address}
+            </Text>
+          )}
+
+          {/* Status Badge */}
+          {status && (
+            <View
+              style={{
+                backgroundColor: badgeColor + "22",
+                paddingVertical: 4,
+                paddingHorizontal: 12,
+                borderRadius: 10,
+                alignSelf: "flex-start",
+                marginTop: 2,
+              }}
+            >
+              <Text
+                style={{
+                  color: badgeColor,
+                  fontSize: 12,
+                  fontWeight: "700",
+                }}
+              >
+                {status}
+              </Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     </Link>

@@ -1,27 +1,25 @@
-import React, { useCallback, useEffect, useState } from "react";
+import { COLORS } from "@/constants/colors";
+import { logout } from "@/services/auth.service";
+import { getContractor } from "@/services/contractor.service";
+import { useAuthStore } from "@/store/auth.store";
+import { Ionicons } from "@expo/vector-icons";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Modal,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { COLORS } from "@/constants/colors";
-import { useAuthStore } from "@/store/auth.store";
-import { getContractor } from "@/services/contractor.service";
-import { router, useFocusEffect } from "expo-router";
-import { logout } from "@/services/auth.service";
 
 export default function ProfileOverview() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
 
-  const uid = user?.uid;
   const [loading, setLoading] = useState(true);
   const [contractor, setContractor] = useState<any>(null);
-
   const [showLogout, setShowLogout] = useState(false);
 
   // Load contractor profile
@@ -61,112 +59,139 @@ export default function ProfileOverview() {
   return (
     <>
       <ScrollView
-        style={{ flex: 1, padding: 20, backgroundColor: COLORS.background }}
+        style={{ flex: 1, backgroundColor: COLORS.background }}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* Avatar + Name Section */}
-        <View style={{ alignItems: "center", marginBottom: 30, marginTop: 30 }}>
+        {/* HEADER */}
+        <View
+          style={{
+            paddingTop: 70,
+            paddingBottom: 20,
+            paddingHorizontal: 20,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 32,
+              fontWeight: "700",
+              color: COLORS.primaryDark,
+            }}
+          >
+            Profile
+          </Text>
+          <Text style={{ color: COLORS.primary, marginTop: 6 }}>
+            Manage your information
+          </Text>
+        </View>
+
+        {/* AVATAR + NAME */}
+        <View
+          style={{
+            alignItems: "center",
+            marginBottom: 30,
+          }}
+        >
           <View
             style={{
-              width: 95,
-              height: 95,
-              borderRadius: 50,
+              width: 110,
+              height: 110,
+              borderRadius: 60,
               backgroundColor: COLORS.primary,
               alignItems: "center",
               justifyContent: "center",
-              marginBottom: 12,
+              marginBottom: 16,
+              shadowColor: "#000",
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 4 },
             }}
           >
-            <Text style={{ color: "#fff", fontSize: 30, fontWeight: "700" }}>
+            <Text
+              style={{
+                color: "#fff",
+                fontSize: 40,
+                fontWeight: "700",
+              }}
+            >
               {initials}
             </Text>
           </View>
 
           <Text
             style={{
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: "700",
               color: COLORS.primaryDark,
             }}
           >
             {contractor.name}
           </Text>
-          <Text style={{ color: COLORS.primary, marginTop: 2 }}>
+          <Text style={{ color: COLORS.primary, marginTop: 4 }}>
             {contractor.email}
           </Text>
         </View>
 
-        {/* Profile Details Card */}
-        <View
+        {/* PERSONAL DETAILS CARD */}
+        <TouchableOpacity
+          onPress={() => router.push("/(dashboard)/profile/details")}
           style={{
             backgroundColor: "#fff",
-            padding: 22,
-            borderRadius: 16,
-            marginBottom: 20,
-            shadowOpacity: 0.08,
+            padding: 20,
+            borderRadius: 18,
+            marginHorizontal: 20,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            shadowColor: "#000",
+            shadowOpacity: 0.04,
             shadowRadius: 6,
             shadowOffset: { width: 0, height: 2 },
+            marginBottom: 16,
           }}
         >
-          <Text
-            style={{
-              fontSize: 18,
-              fontWeight: "700",
-              marginBottom: 14,
-              color: COLORS.primaryDark,
-            }}
-          >
-            Profile Information
+          <Text style={{ fontSize: 16, fontWeight: "600" }}>
+            Personal Details
           </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={22}
+            color={COLORS.primary}
+          />
+        </TouchableOpacity>
 
-          <ProfileRow label="Name" value={contractor.name} />
-          <ProfileRow label="Email" value={contractor.email} />
-          <ProfileRow label="Trade" value={contractor.trade || "Not set"} />
-          <ProfileRow label="Phone" value={contractor.phone || "Not set"} />
-          <ProfileRow label="Status" value={contractor.status || "Available"} />
-
-          <TouchableOpacity
-            onPress={() => router.push("/(dashboard)/profile/edit")}
-            style={{
-              marginTop: 20,
-              paddingVertical: 12,
-              borderRadius: 12,
-              backgroundColor: COLORS.primary,
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}
-            >
-              Edit Profile
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Documents Button */}
+        {/* DOCUMENTS CARD */}
         <TouchableOpacity
           onPress={() => router.push("/(dashboard)/profile/documents")}
           style={{
             backgroundColor: "#fff",
             padding: 20,
-            borderRadius: 16,
+            borderRadius: 18,
+            marginHorizontal: 20,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
-            shadowOpacity: 0.06,
-            shadowRadius: 4,
+            shadowColor: "#000",
+            shadowOpacity: 0.04,
+            shadowRadius: 6,
             shadowOffset: { width: 0, height: 2 },
+            marginBottom: 20,
           }}
         >
-          <Text style={{ fontSize: 16, fontWeight: "600" }}>Documents</Text>
-          <Ionicons name="chevron-forward" size={24} color={COLORS.primary} />
+          <Text style={{ fontSize: 16, fontWeight: "600" }}>
+            Documents
+          </Text>
+          <Ionicons
+            name="chevron-forward"
+            size={22}
+            color={COLORS.primary}
+          />
         </TouchableOpacity>
 
-        {/* Logout Button */}
+        {/* LOGOUT BUTTON */}
         <TouchableOpacity
           onPress={() => setShowLogout(true)}
           style={{
-            marginTop: 30,
+            marginHorizontal: 20,
             backgroundColor: "#EF4444",
             paddingVertical: 14,
             borderRadius: 14,
@@ -174,6 +199,10 @@ export default function ProfileOverview() {
             flexDirection: "row",
             justifyContent: "center",
             gap: 10,
+            shadowColor: "#000",
+            shadowOpacity: 0.05,
+            shadowRadius: 6,
+            shadowOffset: { width: 0, height: 2 },
           }}
         >
           <Ionicons name="log-out-outline" size={22} color="#fff" />
@@ -189,70 +218,102 @@ export default function ProfileOverview() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Logout Modal */}
-      <Modal animationType="fade" transparent visible={showLogout}>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 20,
-          }}
-        >
-          <View
-            style={{
-              width: "100%",
-              backgroundColor: "#fff",
-              padding: 22,
-              borderRadius: 16,
-            }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 8 }}>
-              Confirm Logout
-            </Text>
-            <Text style={{ color: "#6B7280", marginBottom: 20 }}>
-              Are you sure you want to log out?
-            </Text>
-
-            <View
-              style={{ flexDirection: "row", justifyContent: "flex-end", gap: 14 }}
-            >
-              <TouchableOpacity onPress={() => setShowLogout(false)}>
-                <Text style={{ color: "#6B7280", fontSize: 16 }}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={async () => {
-                  await logout();
-                  setUser(null);
-                  router.replace("/(auth)/login");
-                }}
-                style={{
-                  backgroundColor: "#EF4444",
-                  paddingVertical: 10,
-                  paddingHorizontal: 16,
-                  borderRadius: 8,
-                }}
-              >
-                <Text style={{ color: "#fff", fontSize: 16 }}>Logout</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* LOGOUT MODAL */}
+      <LogoutModal
+        show={showLogout}
+        setShow={setShowLogout}
+        setUser={setUser}
+      />
     </>
   );
 }
 
-// Reusable row component
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
-    <View style={{ marginBottom: 12 }}>
+    <View style={{ marginBottom: 14 }}>
       <Text style={{ color: "#6B7280", fontSize: 14 }}>{label}</Text>
-      <Text style={{ fontSize: 16, fontWeight: "600", color: "#111" }}>
+      <Text
+        style={{
+          fontSize: 16,
+          fontWeight: "600",
+          color: "#111",
+          marginTop: 2,
+        }}
+      >
         {value}
       </Text>
     </View>
+  );
+}
+
+function LogoutModal({
+  show,
+  setShow,
+  setUser,
+}: {
+  show: boolean;
+  setShow: (v: boolean) => void;
+  setUser: any;
+}) {
+  return (
+    <Modal animationType="fade" transparent visible={show}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 20,
+        }}
+      >
+        <View
+          style={{
+            width: "100%",
+            backgroundColor: "#fff",
+            padding: 22,
+            borderRadius: 16,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: "700",
+              marginBottom: 8,
+              color: COLORS.primaryDark,
+            }}
+          >
+            Confirm Logout
+          </Text>
+
+          <Text style={{ color: "#6B7280", marginBottom: 18 }}>
+            Are you sure you want to log out?
+          </Text>
+
+          <View
+            style={{ flexDirection: "row", justifyContent: "flex-end", gap: 16 }}
+          >
+            <TouchableOpacity onPress={() => setShow(false)}>
+              <Text style={{ color: "#6B7280", fontSize: 16 }}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={async () => {
+                await logout();
+                setUser(null);
+                router.replace("/(auth)/login");
+              }}
+              style={{
+                backgroundColor: "#EF4444",
+                paddingVertical: 10,
+                paddingHorizontal: 18,
+                borderRadius: 10,
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 16 }}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }

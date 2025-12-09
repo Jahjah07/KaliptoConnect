@@ -4,5 +4,6 @@ email: string;
 displayName?: string;
 phone?: string;
 role?: 'contractor' | 'admin' | 'viewer';
+trade?: string;
 createdAt?: number;
 }
