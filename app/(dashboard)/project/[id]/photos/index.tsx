@@ -5,22 +5,24 @@ import { usePhotoUpload } from "@/hooks/usePhotoUpload";
 import { fetchProjectPhotos } from "@/services/photos.service";
 import { Photo } from "@/types/photo";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Animated,
-    Image,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Animated,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function ProjectPhotosScreen() {
   const { id: projectId } = useLocalSearchParams();
-
+  const navigation = useNavigation();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,13 +73,25 @@ export default function ProjectPhotosScreen() {
           paddingBottom: 10,
         }}
       >
-        <Text
-          style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}
-        >
-          Project Photos
-        </Text>
-
-        <Text style={{ color: COLORS.primary, marginTop: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={10}
+            style={{ marginRight: 12 }}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={26}
+              color={COLORS.primaryDark}
+            />
+          </Pressable>
+          <Text
+            style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}
+          >
+            Project Photos
+          </Text>
+        </View>
+        <Text style={{ color: COLORS.primary, marginTop: 4}}>
           {photos.length} photos
         </Text>
       </View>

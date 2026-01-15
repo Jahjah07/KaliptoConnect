@@ -4,10 +4,12 @@ import {
   updateContractorProfile,
 } from "@/services/contractor.service";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -19,7 +21,7 @@ import Toast from "react-native-toast-message";
 export default function PersonalDetailsScreen() {
   const [contractor, setContractor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
+  const navigation = useNavigation();
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState("");
 
@@ -120,15 +122,30 @@ export default function PersonalDetailsScreen() {
           alignItems: "center",
         }}
       >
-        <Text
-          style={{
-            fontSize: 26,
-            fontWeight: "700",
-            color: COLORS.primaryDark,
-          }}
-        >
-          Personal Details
-        </Text>
+        {/* LEFT SIDE (Back + Title) */}
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={10}
+            style={{ marginRight: 12 }}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={26}
+              color={COLORS.primaryDark}
+            />
+          </Pressable>
+
+          <Text
+            style={{
+              fontSize: 26,
+              fontWeight: "700",
+              color: COLORS.primaryDark,
+            }}
+          >
+            Personal Details
+          </Text>
+        </View>
 
         <Ionicons name="person-circle-outline" size={34} color={COLORS.primary} />
       </View>

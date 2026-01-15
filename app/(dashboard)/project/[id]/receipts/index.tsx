@@ -5,21 +5,23 @@ import { useReceiptUpload } from "@/hooks/useReceiptUpload";
 import { fetchProjectReceipts } from "@/services/receipts.service";
 import { Receipt } from "@/types/receipt";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 export default function ProjectReceiptsScreen() {
   const { id: projectId } = useLocalSearchParams();
-
+  const navigation = useNavigation();
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [pageLoading, setPageLoading] = useState(true);   // <-- renamed
   const [refreshing, setRefreshing] = useState(false);
@@ -69,10 +71,22 @@ export default function ProjectReceiptsScreen() {
           paddingBottom: 10,
         }}
       >
-        <Text style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}>
-          Project Receipts
-        </Text>
-
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={10}
+            style={{ marginRight: 12 }}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={26}
+              color={COLORS.primaryDark}
+            />
+          </Pressable>
+          <Text style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}>
+            Project Receipts
+          </Text>
+        </View>
         <Text style={{ color: COLORS.primary, marginTop: 4 }}>
           {receipts.length} receipts
         </Text>

@@ -2,12 +2,15 @@
 import DocumentUploadCard from "@/components/documents/DocumentUploadCard";
 import { COLORS } from "@/constants/colors";
 import { getContractor, updateContractorDocument } from "@/services/contractor.service";
+import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useNavigation } from "@react-navigation/native";
 import Constants from "expo-constants";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   Text,
   View
@@ -17,7 +20,7 @@ import Toast from "react-native-toast-message";
 export default function DocumentsScreen() {
   const [contractor, setContractor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
+  const navigation = useNavigation();
   // Date Picker State
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedField, setSelectedField] = useState<string | null>(null);
@@ -141,17 +144,29 @@ export default function DocumentsScreen() {
     >
       {/* HEADER */}
       <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-        <Text
-          style={{
-            fontSize: 28,
-            fontWeight: "800",
-            color: COLORS.primaryDark,
-            letterSpacing: -0.5,
-          }}
-        >
-          Documents
-        </Text>
-
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={10}
+            style={{ marginRight: 12 }}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={26}
+              color={COLORS.primaryDark}
+            />
+          </Pressable>
+          <Text
+            style={{
+              fontSize: 28,
+              fontWeight: "800",
+              color: COLORS.primaryDark,
+              letterSpacing: -0.5,
+            }}
+          >
+            Documents
+          </Text>
+        </View>
         <Text style={{ marginTop: 4, color: "#6B7280" }}>
           Upload your required contractor documents.
         </Text>

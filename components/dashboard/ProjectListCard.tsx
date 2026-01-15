@@ -1,6 +1,6 @@
 import { COLORS } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { useRouter } from "expo-router";
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
@@ -18,11 +18,12 @@ const statusColors: any = {
 };
 
 export default function ProjectListCard({ id, name, address, status }: Props) {
+  const router = useRouter();
   const badgeColor = statusColors[status ?? "Pending"] || "#6B7280";
 
   return (
-    <Link href={`/(dashboard)/project/${id}`} asChild>
-      <TouchableOpacity
+    <TouchableOpacity
+      onPress={() => router.push(`/(dashboard)/project/${id}`)}
         style={{
           backgroundColor: "#fff",
           padding: 18,
@@ -95,6 +96,5 @@ export default function ProjectListCard({ id, name, address, status }: Props) {
           )}
         </View>
       </TouchableOpacity>
-    </Link>
   );
 }

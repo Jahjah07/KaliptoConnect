@@ -4,11 +4,12 @@ import { COLORS } from "@/constants/colors";
 import { geocodeLocation } from "@/services/geocode.service";
 import { fetchProjectById } from "@/services/projects.service";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { Link, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -19,7 +20,7 @@ import MapView, { Marker } from "react-native-maps";
 export default function ProjectDetail() {
   const { id } = useLocalSearchParams();
   const projectId = String(id);
-
+  const navigation = useNavigation();
   const [project, setProject] = useState<any>(null);
   const [coords, setCoords] = useState<any>(null);
 
@@ -64,16 +65,28 @@ export default function ProjectDetail() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120, marginTop: 30 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120, marginTop: 50 }}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            hitSlop={10}
+            style={{ marginRight: 12 }}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={26}
+              color={COLORS.primaryDark}
+            />
+          </Pressable>
+          {/* PROJECT TITLE */}
+          <Text style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}>
+            {project.name}
+          </Text>
+        </View>
         
-        {/* PROJECT TITLE */}
-        <Text style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}>
-          {project.name}
-        </Text>
-
-        <Text style={{ color: "#6B7280", marginTop: 4, marginBottom: 20 }}>
-          {project.status || "No status available"}
-        </Text>
+          <Text style={{ color: "#6B7280", marginTop: 4, marginBottom: 20 }}>
+            {project.status || "No status available"}
+          </Text>
 
         {/* QUICK STATS */}
         <View
