@@ -6,6 +6,7 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
+import { Platform } from "react-native";
 import Toast from "react-native-toast-message";
 
 // 3️⃣ Firebase
@@ -16,10 +17,15 @@ import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/auth.store";
 
+/* ------------------------------------------------------------------ */
+/*                   GLOBAL NOTIFICATION HANDLER                      */
+/* ------------------------------------------------------------------ */
+
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
+  handleNotification: async (): Promise<Notifications.NotificationBehavior> => ({
+    shouldShowAlert: true,   // Required for Android + older iOS
+    shouldShowBanner: true,  // Required for newer iOS
+    shouldShowList: true,    // Required for newer iOS
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -30,9 +36,25 @@ export default function RootLayout() {
   const [authLoaded, setAuthLoaded] = useState(false);
   const router = useRouter();
 
-  /* ---------------------------------------------------------- */
-  /*                     Auth Listener                          */
-  /* ---------------------------------------------------------- */
+  /* ------------------------------------------------------------------ */
+  /*                   ANDROID NOTIFICATION CHANNEL                     */
+  /* ------------------------------------------------------------------ */
+
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#1E6F5C",
+        sound: "default",
+      });
+    }
+  }, []);
+
+  /* ------------------------------------------------------------------ */
+  /*                        AUTH LISTENER                               */
+  /* ------------------------------------------------------------------ */
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -47,9 +69,9 @@ export default function RootLayout() {
     return unsub;
   }, []);
 
-  /* ---------------------------------------------------------- */
-  /*              Handle Notification Tap                      */
-  /* ---------------------------------------------------------- */
+  /* ------------------------------------------------------------------ */
+  /*                  HANDLE NOTIFICATION TAP                           */
+  /* ------------------------------------------------------------------ */
 
   useEffect(() => {
     const subscription =
@@ -62,9 +84,9 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
-  /* ---------------------------------------------------------- */
-  /*           Register & Store Push Token                     */
-  /* ---------------------------------------------------------- */
+  /* ------------------------------------------------------------------ */
+  /*                 REGISTER & STORE PUSH TOKEN                        */
+  /* ------------------------------------------------------------------ */
 
   async function registerForPushNotifications(uid: string) {
     if (!Device.isDevice) return;

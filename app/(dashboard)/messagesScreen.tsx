@@ -87,12 +87,9 @@ export default function MessagesScreen() {
         if (Device.isDevice) {
           const { status } = await Notifications.requestPermissionsAsync();
           if (status !== "granted") {
-            console.log("Permission not granted");
+            alert("Permission not granted");
             return;
           }
-
-          const token = await Notifications.getExpoPushTokenAsync();
-          alert(token.data);
         }
       }
     });

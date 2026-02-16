@@ -2,9 +2,11 @@ import { COLORS } from "@/constants/colors";
 import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/auth.store";
 import { Ionicons } from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
 import { Redirect, Tabs } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 export default function DashboardLayout() {
   const user = useAuthStore((s) => s.user);
@@ -19,20 +21,19 @@ export default function DashboardLayout() {
 
     const conversationRef = doc(db, "conversations", user.uid);
 
-    const unsub = onSnapshot(conversationRef, (snapshot) => {
-      const data = snapshot.data();
+    const unsub = onSnapshot(conversationRef, async (snapshot) => {
+      const count = snapshot.data()?.unreadCount?.contractor ?? 0;
 
-      if (data?.unreadCount?.contractor) {
-        setUnreadCount(data.unreadCount.contractor);
-      } else {
-        setUnreadCount(0);
-      }
+      setUnreadCount(count);
+
+      // 🔥 Sync app icon badge (iOS + Android)
+      await Notifications.setBadgeCountAsync(count);
     });
 
     return unsub;
   }, [user?.uid]);
 
-  // ✅ Redirect AFTER hooks
+  // Redirect AFTER hooks
   if (!user) {
     return <Redirect href="/(auth)/login" />;
   }
@@ -77,7 +78,7 @@ export default function DashboardLayout() {
         options={{
           title: "Message",
           tabBarIcon: ({ color }) => (
-            <>
+            <View>
               <Ionicons
                 name="chatbubble-ellipses-outline"
                 size={22}
@@ -87,7 +88,7 @@ export default function DashboardLayout() {
               {unreadCount > 0 && (
                 <TabsBadge count={unreadCount} />
               )}
-            </>
+            </View>
           ),
         }}
       />
@@ -116,6 +117,7 @@ export default function DashboardLayout() {
         }}
       />
 
+      {/* Hidden index route */}
       <Tabs.Screen name="index" options={{ href: null }} />
     </Tabs>
   );
@@ -124,8 +126,6 @@ export default function DashboardLayout() {
 /* ---------------------------------------------------------- */
 /*                     Badge Component                        */
 /* ---------------------------------------------------------- */
-
-import { StyleSheet, Text, View } from "react-native";
 
 function TabsBadge({ count }: { count: number }) {
   return (
