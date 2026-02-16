@@ -1,6 +1,7 @@
 import MessageBubble from "@/components/message/MessageBubble";
 import { auth, db } from "@/lib/firebase";
 import { Feather } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { onAuthStateChanged } from "firebase/auth";
@@ -148,15 +149,17 @@ export default function MessagesScreen() {
   /*                  Reset Unread Count                        */
   /* ---------------------------------------------------------- */
 
-  useEffect(() => {
-    if (!uid) return;
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!uid) return;
 
-    const conversationRef = doc(db, "conversations", uid);
+      const conversationRef = doc(db, "conversations", uid);
 
-    updateDoc(conversationRef, {
-      "unreadCount.contractor": 0,
-    }).catch(() => {});
-  }, [uid, messages]);
+      updateDoc(conversationRef, {
+        "unreadCount.contractor": 0,
+      }).catch(() => {});
+    }, [uid])
+  );
 
   /* ---------------------------------------------------------- */
   /*                    Presence Handling                       */
@@ -269,7 +272,7 @@ export default function MessagesScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
       >
         {/* Header */}
         <View style={styles.header}>

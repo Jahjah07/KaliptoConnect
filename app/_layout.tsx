@@ -20,12 +20,10 @@ import { useAuthStore } from "@/store/auth.store";
 /* ------------------------------------------------------------------ */
 /*                   GLOBAL NOTIFICATION HANDLER                      */
 /* ------------------------------------------------------------------ */
-
 Notifications.setNotificationHandler({
-  handleNotification: async (): Promise<Notifications.NotificationBehavior> => ({
-    shouldShowAlert: true,   // Required for Android + older iOS
-    shouldShowBanner: true,  // Required for newer iOS
-    shouldShowList: true,    // Required for newer iOS
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
