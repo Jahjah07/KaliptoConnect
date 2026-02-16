@@ -1,152 +1,257 @@
 // app/(dashboard)/profile/documents.tsx
 import DocumentUploadCard from "@/components/documents/DocumentUploadCard";
 import { COLORS } from "@/constants/colors";
-import { getContractor, updateContractorDocument } from "@/services/contractor.service";
+import { scheduleExpiryReminder } from "@/hooks/useNotification";
+import {
+  deleteContractorDocument,
+  getContractor,
+  getContractorDocumentPresign,
+  saveContractorDocumentMetadata,
+  type AllowedDocumentField
+} from "@/services/contractor.service";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useNavigation } from "@react-navigation/native";
-import Constants from "expo-constants";
-import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import { router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Button,
+  Image,
+  Modal,
+  Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
-  View
+  useColorScheme,
+  View,
 } from "react-native";
 import Toast from "react-native-toast-message";
+
+/* ---------------------------------------
+   Helpers
+---------------------------------------- */
+
+function getExpiryInfo(expiry?: string) {
+  if (!expiry) return null;
+
+  const daysLeft = Math.ceil(
+    (new Date(expiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysLeft < 0)
+    return { label: "Expired", color: COLORS.error };
+
+  if (daysLeft <= 30)
+    return { label: `Expires in ${daysLeft} days`, color: COLORS.warning };
+
+  return { label: `Expires in ${daysLeft} days`, color: COLORS.primary };
+}
+
+/* ---------------------------------------
+   Screen
+---------------------------------------- */
 
 export default function DocumentsScreen() {
   const [contractor, setContractor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const navigation = useNavigation();
-  // Date Picker State
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedField, setSelectedField] = useState<string | null>(null);
+  const [busyField, setBusyField] = useState<AllowedDocumentField | null>(null);
+  const [dateField, setDateField] = useState<AllowedDocumentField | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [tempDate, setTempDate] = React.useState<Date | null>(null);
+  const scheme = useColorScheme();
 
-  // ---------------------------
-  // LOAD CONTRACTOR PROFILE
-  // ---------------------------
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await getContractor();
-        setContractor(data);
-      } catch (err) {
-        console.log("Failed to load contractor:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
+    getContractor().then((data) => {
+      setContractor(data);
+      setLoading(false);
+    });
   }, []);
 
-  // ---------------------------
-  // IMAGE UPLOAD HANDLER
-  // ---------------------------
-  const handleUpload = async (field: string) => {
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-    });
+  function validateFileSize(
+    size: number,
+    mimeType: string
+  ): string | null {
+    const MB = 1024 * 1024;
 
-    if (res.canceled) return;
+    if (mimeType.startsWith("image/") && size > 8 * MB) {
+      return "Images must be under 8 MB";
+    }
 
-    const uri = res.assets[0].uri;
+    if (mimeType === "application/pdf" && size > 15 * MB) {
+      return "PDF files must be under 15 MB";
+    }
+
+    return null;
+  }
+
+  /* ---------- Actions ---------- */
+
+  async function pickAndUpload(field: AllowedDocumentField) {
+    setBusyField(field);
+    setUploadProgress(0);
 
     try {
-      const safeName = contractor.name
-        ? contractor.name.replace(/[^a-zA-Z0-9]/g, "_")
-        : "unknown";
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ["image/*", "application/pdf"],
+        copyToCacheDirectory: true,
+      });
 
-      const formData = new FormData();
-      formData.append("file", {
-        uri,
-        type: "image/jpeg",
-        name: `${field}.jpg`,
-      } as any);
+      if (res.canceled) return;
 
-      formData.append(
-        "upload_preset",
-        Constants.expoConfig?.extra?.CLOUDINARY_UPLOAD_PRESET
-      );
+      const asset = res.assets[0];
+      const mimeType = asset.mimeType || "application/octet-stream";
 
-      // 👇 Save under contractors/{name}
-      formData.append("folder", `contractors/${safeName}`);
-
-      const cloudinaryRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${Constants.expoConfig?.extra?.CLOUDINARY_CLOUD_NAME}/image/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const data = await cloudinaryRes.json();
-
-      if (!data.secure_url) {
-        Toast.show({
-          type: "error",
-          text1: "Upload Failed",
-          text2: "Cloudinary did not return a valid URL.",
-        });
+      // ✅ FILE SIZE CHECK
+      const sizeError = validateFileSize(asset.size ?? 0, mimeType);
+      if (sizeError) {
+        Toast.show({ type: "error", text1: sizeError });
         return;
       }
 
-      const updated = await updateContractorDocument(field, data.secure_url);
-      setContractor(updated);
+      // 1️⃣ Get presigned URL
+      const { uploadUrl, objectKey } =
+        await getContractorDocumentPresign({
+          field,
+          mimeType,
+        });
+
+      // 2️⃣ Upload file directly to R2
+      const fileBase64 = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const binary = Uint8Array.from(
+        atob(fileBase64),
+        (c) => c.charCodeAt(0)
+      );
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader("Content-Type", mimeType);
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(
+              Math.round((e.loaded / e.total) * 100)
+            );
+          }
+        };
+
+        xhr.onload = () =>
+          xhr.status < 300 ? resolve() : reject();
+        xhr.onerror = reject;
+        xhr.send(binary);
+      });
+
+      // 3️⃣ Save metadata
+      const fileUrl = `https://kaliptoconstructionscdn.com/${objectKey}`;
+
+      await saveContractorDocumentMetadata({
+        field,
+        fileUrl,
+        objectKey,
+      });
+
+      setContractor(await getContractor());
+
       Toast.show({
         type: "success",
-        text1: "Document Uploaded",
-        text2: `${field} has been updated successfully`,
+        text1: "Upload complete",
       });
     } catch (err) {
-      console.log("❌ Upload failed:", err);
+      console.error(err);
       Toast.show({
         type: "error",
-        text1: "Upload Error",
-        text2: "Something went wrong. Try again.",
+        text1: "Upload failed",
       });
+    } finally {
+      setBusyField(null);
+      setUploadProgress(null);
     }
-  };
+  }
 
-  // ---------------------------
-  // EXPIRY DATE HANDLER
-  // ---------------------------
-  const handleExpiryChange = async (_: any, date?: Date) => {
-    setShowDatePicker(false);
-
-    if (selectedField && date) {
-      const expiry = date.toISOString().slice(0, 10);
-
-      // Map field → correct backend fields
-      const updated = await updateContractorDocument(selectedField, "", expiry);
-
-      setContractor(updated);
+  function preview(url?: string) {
+    if (!url) return;
+    if (url.endsWith(".pdf")) {
+      WebBrowser.openBrowserAsync(url);
+    } else {
+      setPreviewUrl(url);
     }
-  };
+  }
+
+  function confirmDelete(field: AllowedDocumentField) {
+    Alert.alert(
+      "Delete document?",
+      "This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setBusyField(field);
+            await deleteContractorDocument(field);
+            setContractor(await getContractor());
+            setBusyField(null);
+          },
+        },
+      ]
+    );
+  }
+
+  async function refreshContractor() {
+    setRefreshing(true);
+    try {
+      const data = await getContractor();
+      setContractor(data);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  /* ---------- Render ---------- */
 
   if (loading || !contractor) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={{ flex: 1, justifyContent: "center" }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
+  const docs = [
+    { field: "abn", title: "ABN", value: contractor.abn, expiry: contractor.abnExpiry },
+    { field: "contractorLicense", title: "Contractor License", value: contractor.contractorLicense, expiry: contractor.contractorLicenseExpiry },
+    { field: "validId", title: "Valid Id", value: contractor.validId, expiry: contractor.validIdExpiry },
+    { field: "publicLiabilityCopy", title: "Public Liability", value: contractor.publicLiabilityCopy, expiry: contractor.publicLiabilityCopyExpiry },
+    { field: "workersInsuranceCopy", title: "Workers Insurance", value: contractor.workersInsuranceCopy, expiry: contractor.workersInsuranceCopyExpiry },
+  ] as const;
+
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: COLORS.background, paddingTop: 50 }}
+      style={{ flex: 1, backgroundColor: COLORS.background }}
       contentContainerStyle={{ paddingBottom: 120 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={refreshContractor}
+          tintColor={COLORS.primary}
+        />
+      }
     >
-      {/* HEADER */}
-      <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+      {/* ---------- HEADER ---------- */}
+      <View style={{ paddingTop: 50, paddingHorizontal: 20, marginBottom: 20, marginTop: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <Pressable
-            onPress={() => navigation.goBack()}
+            onPress={() => router.replace("/profile")}
             hitSlop={10}
             style={{ marginRight: 12 }}
           >
@@ -156,23 +261,24 @@ export default function DocumentsScreen() {
               color={COLORS.primaryDark}
             />
           </Pressable>
+
           <Text
             style={{
               fontSize: 28,
               fontWeight: "800",
               color: COLORS.primaryDark,
-              letterSpacing: -0.5,
             }}
           >
             Documents
           </Text>
         </View>
+
         <Text style={{ marginTop: 4, color: "#6B7280" }}>
-          Upload your required contractor documents.
+          Upload and manage your required contractor documents.
         </Text>
       </View>
 
-      {/* DOCUMENT SECTION */}
+      {/* ---------- CONTENT ---------- */}
       <View
         style={{
           backgroundColor: "#fff",
@@ -196,99 +302,123 @@ export default function DocumentsScreen() {
           Required Documents
         </Text>
 
-        {/* ABN */}
-        <DocumentUploadCard
-          title="ABN"
-          subtitle="Registered Australian Business Number"
-          icon="briefcase-outline"
-          value={contractor.abn}
-          expiry={contractor.abnExpiry}
-          statusColor={!contractor.abn ? COLORS.error : COLORS.primary}
-          onUpload={() => handleUpload("abn")}
-          onExpiryChange={() => {
-            setSelectedField("abn");
-            setShowDatePicker(true);
-          }}
-        />
+        {docs.map((doc) => {
+          const expiry = getExpiryInfo(doc.expiry);
 
-        {/* Contractor License */}
-        <DocumentUploadCard
-          title="Contractor License"
-          subtitle="Your professional trade license"
-          icon="shield-checkmark-outline"
-          value={contractor.contractorLicense}
-          expiry={contractor.contractorLicenseExpiry}
-          statusColor={
-            !contractor.contractorLicense ? COLORS.error : COLORS.primary
-          }
-          onUpload={() => handleUpload("contractorLicense")}
-          onExpiryChange={() => {
-            setSelectedField("contractorLicense");
-            setShowDatePicker(true);
-          }}
-        />
+          return (
+            <DocumentUploadCard
+              key={doc.field}
+              title={doc.title}
+              value={doc.value}
+              loading={busyField === doc.field}
+              progress={busyField === doc.field ? uploadProgress : null}
+              badgeText={expiry?.label}
+              badgeColor={expiry?.color}
+              onPrimaryAction={() =>
+                doc.value ? preview(doc.value) : pickAndUpload(doc.field)
+              }
+              onReplace={() => pickAndUpload(doc.field)}
+              onSetExpiry={() => {
+                const existingExpiry = doc.expiry
+                  ? new Date(doc.expiry)
+                  : new Date();
 
-        {/* Driver's License */}
-        <DocumentUploadCard
-          title="Driver's License"
-          subtitle="Government-issued ID"
-          icon="card-outline"
-          value={contractor.driversLicense}
-          expiry={contractor.driversLicenseExpiry}
-          statusColor={
-            !contractor.driversLicense ? COLORS.error : COLORS.primary
-          }
-          onUpload={() => handleUpload("driversLicense")}
-          onExpiryChange={() => {
-            setSelectedField("driversLicense");
-            setShowDatePicker(true);
-          }}
-        />
-
-        {/* Public Liability */}
-        <DocumentUploadCard
-          title="Public Liability Insurance"
-          subtitle="Proof of insurance coverage"
-          icon="document-lock-outline"
-          value={contractor.publicLiabilityCopy}
-          expiry={contractor.publicLiabilityExpiry}
-          statusColor={
-            !contractor.publicLiabilityCopy ? COLORS.error : COLORS.primary
-          }
-          onUpload={() => handleUpload("publicLiabilityCopy")}
-          onExpiryChange={() => {
-            setSelectedField("publicLiabilityCopy");
-            setShowDatePicker(true);
-          }}
-        />
-
-        {/* Workers Insurance */}
-        <DocumentUploadCard
-          title="Workers Insurance"
-          subtitle="Workers compensation coverage"
-          icon="document-text-outline"
-          value={contractor.workersInsuranceCopy}
-          expiry={contractor.workersInsuranceExpiry}
-          statusColor={
-            !contractor.workersInsuranceCopy ? COLORS.error : COLORS.primary
-          }
-          onUpload={() => handleUpload("workersInsuranceCopy")}
-          onExpiryChange={() => {
-            setSelectedField("workersInsuranceCopy");
-            setShowDatePicker(true);
-          }}
-        />
+                setTempDate(existingExpiry);
+                setDateField(doc.field);
+              }}
+              onDelete={() => confirmDelete(doc.field)}
+            />
+          );
+        })}
       </View>
 
-      {/* DATE PICKER */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={new Date()}
-          mode="date"
-          minimumDate={new Date()}
-          onChange={handleExpiryChange}
-        />
+      {/* ---------- DATE PICKER ---------- */}
+      {dateField && (
+        Platform.OS === "ios" ? (
+          <Modal
+            transparent
+            animationType="slide"
+            onRequestClose={() => setDateField(null)}
+          >
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "flex-end",
+                backgroundColor: "rgba(0,0,0,0.4)",
+              }}
+            >
+              <View style={{ backgroundColor: "#1c1c1e", padding: 16 }}>
+                <DateTimePicker
+                  value={tempDate ?? new Date()}
+                  mode="date"
+                  display="spinner"
+                  onChange={(_, date) => {
+                    if (date) setTempDate(date);
+                  }}
+                />
+
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Button title="Cancel" onPress={() => setDateField(null)} />
+                  <Button
+                    title="Done"
+                    onPress={async () => {
+                      if (!tempDate || !dateField) return;
+
+                      const field = dateField;
+                      const expiry = tempDate.toLocaleDateString("en-CA");
+
+                      setDateField(null);
+
+                      await saveContractorDocumentMetadata({ field, expiry });
+                      await scheduleExpiryReminder(field, expiry);
+                      setContractor(await getContractor());
+                    }}
+                  />
+                </View>
+              </View>
+            </View>
+          </Modal>
+        ) : (
+          <DateTimePicker
+            value={new Date()}
+            mode="date"
+            themeVariant={scheme === "dark" ? "dark" : "light"}
+            onChange={async (event, date) => {
+              if (event.type !== "set" || !date || !dateField) {
+                setDateField(null);
+                return;
+              }
+
+              const field = dateField;
+              setDateField(null);
+
+              const expiry = date.toISOString().slice(0, 10);
+
+              await saveContractorDocumentMetadata({ field, expiry });
+              await scheduleExpiryReminder(field, expiry);
+              setContractor(await getContractor());
+            }}
+          />
+        )
       )}
+
+      {/* ---------- IMAGE PREVIEW ---------- */}
+      <Modal visible={!!previewUrl} transparent>
+        <View style={{ flex: 1, backgroundColor: "#000" }}>
+          <Pressable
+            style={{ position: "absolute", top: 40, right: 20, zIndex: 10 }}
+            onPress={() => setPreviewUrl(null)}
+          >
+            <Text style={{ color: "#fff", fontSize: 18 }}>Close</Text>
+          </Pressable>
+          {previewUrl && (
+            <Image
+              source={{ uri: previewUrl }}
+              style={{ flex: 1, resizeMode: "contain" }}
+            />
+          )}
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

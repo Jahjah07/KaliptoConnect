@@ -3,6 +3,7 @@ import StatCard from "@/components/dashboard/StatCard";
 import Skeleton from "@/components/ui/Skeleton";
 import { COLORS } from "@/constants/colors";
 import { getContractor } from "@/services/contractor.service";
+import { fetchDashboardStats } from "@/services/dashboard.service";
 import { fetchContractorProjects } from "@/services/projects.service";
 import { useAuthStore } from "@/store/auth.store";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,7 +24,7 @@ export default function Home() {
   const requiredDocs = [
     "abn",
     "contractorLicense",
-    "driversLicense",
+    "validId",
     "publicLiabilityCopy",
     "workersInsuranceCopy",
   ];
@@ -37,11 +38,7 @@ export default function Home() {
   const hasMissingFields = missingFieldList.length > 0;
 
   const showProfileCard = hasMissingDocs || hasMissingFields;
-  const isProfileIncomplete = Object.values(missingFields).includes(true);
-  const initials = user?.displayName
-    ? user.displayName.split(" ").map((n) => n[0]).join("").toUpperCase()
-    : "U";
-
+  const [stats, setStats] = useState<any>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -55,11 +52,15 @@ export default function Home() {
 
   const reloadDashboard = async () => {
     try {
-      const data = await fetchContractorProjects();
-      setProjects(Array.isArray(data) ? data : []);
-
-      const contractorData = await getContractor();
+      const [projectData, contractorData, statsData] =
+        await Promise.all([
+          fetchContractorProjects(),
+          getContractor(),
+          fetchDashboardStats(), // NEW
+        ]);
+      setProjects(Array.isArray(projectData) ? projectData : []);
       setContractor(contractorData);
+      setStats(statsData);
     } catch (err) {
       console.log("❌ Refresh error:", err);
     }
@@ -156,25 +157,25 @@ export default function Home() {
   else if (completion < 75) progressColor = COLORS.warning;
   else progressColor = COLORS.primary;               
   // 📌 TOTALS
-  const totalProjects = projects.length;
-
-  const totalPhotos = projects.reduce(
-    (sum, p) => sum + (p.photos?.length || 0),
-    0
-  );
-
-  const totalReceipts = projects.reduce(
-    (sum, p) => sum + (p.receipts?.length || 0),
-    0
-  );
+  const totalProjects = stats?.totalProjects ?? 0;
+  const totalPhotos = stats?.totalPhotos ?? 0;
 
   // 📌 FILTERS
-  const currentProjects = projects.filter(
-    (p) => p.status === "Pending" || p.status === "Active"
-  );
+  const currentProjects = projects
+    .filter((p) => p.status === "Pending" || p.status === "Ongoing")
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() -
+        new Date(a.createdAt).getTime()
+    );
 
   const recentProjects = projects
     .filter((p) => p.status === "Completed" || p.status === "Cancelled")
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() -
+        new Date(a.createdAt).getTime()
+    )
     .slice(0, 6);
 
   const onRefresh = async () => {
@@ -203,42 +204,56 @@ export default function Home() {
           Welcome back,
         </Text>
 
-        <Text
+        {/* Name + Bubble Row */}
+        <View
           style={{
-            color: COLORS.primaryDark,
-            fontSize: 30,
-            fontWeight: "800",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
             marginTop: 4,
-            letterSpacing: -0.5,
           }}
         >
-          {contractor?.name ?? "Contractor"}
-        </Text>
+          <Text
+            style={{
+              color: COLORS.primaryDark,
+              fontSize: 30,
+              fontWeight: "800",
+              letterSpacing: -0.5,
+            }}
+          >
+            {contractor?.name ?? "Contractor"}
+          </Text>
+
+          {/* Profile Bubble */}
+          <View
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 23,
+              backgroundColor: COLORS.primary,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+              {contractor?.name
+                ? contractor.name
+                    .trim()
+                    .split(" ")
+                    .filter(Boolean)
+                    .slice(0, 2) // only first two names
+                    .map((word: any) => word[0].toUpperCase())
+                    .join("")
+                : "C"}
+            </Text>
+          </View>
+        </View>
 
         <Text
           style={{ color: COLORS.primary, marginTop: 4, fontSize: 14 }}
         >
           Kalipto Constructions Dashboard
         </Text>
-
-        {/* Profile Bubble */}
-        <View
-          style={{
-            position: "absolute",
-            right: 24,
-            top: 60,
-            width: 46,
-            height: 46,
-            borderRadius: 23,
-            backgroundColor: COLORS.primary,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-            {initials}
-          </Text>
-        </View>
       </View>
 
       {/* MAIN CONTENT AREA */}
@@ -385,7 +400,7 @@ export default function Home() {
         <View
           style={{
             flexDirection: "row",
-            justifyContent: "space-between",
+            justifyContent: "space-evenly",
             marginBottom: 26,
           }}
         >
@@ -400,12 +415,6 @@ export default function Home() {
             label="Photos"
             value={String(totalPhotos)}
             onPress={() => router.push("/(dashboard)/photos")}
-          />
-          <StatCard
-            icon="image"
-            label="Receipts"
-            value={String(totalReceipts)}
-            onPress={() => router.push("/(dashboard)/receipts")}
           />
         </View>
 

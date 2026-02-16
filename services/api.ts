@@ -1,15 +1,14 @@
 // src/services/api.ts
-import { auth } from "@/lib/firebase"; // your firebase web SDK config (client)
-import { Platform } from "react-native";
+import { auth } from "@/lib/firebase";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "https://crm-system-gray.vercel.app/api"; // set this in env
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "https://crm-system-gray.vercel.app/api";
 
 async function getToken(): Promise<string | null> {
   try {
     const user = auth.currentUser;
     if (!user) return null;
     // expires => refreshes automatically
-    return await user.getIdToken();
+    return await user.getIdToken(true);
   } catch (err) {
     console.warn("Unable to get token", err);
     return null;

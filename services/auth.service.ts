@@ -1,41 +1,92 @@
-// services/auth.service.ts
 import { auth } from "@/lib/firebase";
 import { createContractor } from "@/services/contractor.service";
+
+import { startTokenAutoRefresh, stopTokenAutoRefresh } from "@/services/tokenRefresh.service";
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
-  updateProfile
+  updateProfile,
+  User,
 } from "firebase/auth";
+import { createSession } from "./session.service";
 
+/* ---------------------------------------
+   REGISTER USER (SAFE + ATOMIC)
+---------------------------------------- */
 export async function registerWithEmail(
   email: string,
   password: string,
   displayName?: string
-) {
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
-  const user = cred.user;
+): Promise<User> {
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanName = displayName?.trim() || "";
 
-  if (displayName) {
-    await updateProfile(user, { displayName });
+  let user: User | null = null;
+
+  try {
+    
+    const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+    user = cred.user;
+
+    // 🔥 CRITICAL FIX — wait for token to exist
+    await user.getIdToken(true);
+    await new Promise((r) => setTimeout(r, 800));
+    if (cleanName) {
+      await updateProfile(user, { displayName: cleanName });
+    }
+
+    await createContractor({
+      name: cleanName,
+      email: cleanEmail,
+    });
+
+    await createSession();
+
+    startTokenAutoRefresh();
+
+    return user;
+  } catch (err: any) {
+    console.log("❌ Registration error:", err);
+
+    if (user) {
+      try {
+        await deleteUser(user);
+      } catch (cleanupErr) {
+        console.log("⚠️ Failed to rollback Firebase user:", cleanupErr);
+      }
+    }
+
+    throw new Error(err.message || "Registration failed");
   }
-
-  await createContractor({
-    name: displayName ?? "",
-    email,
-  });
-
-  return user;
 }
 
-export async function loginWithEmail(email: string, password: string) {
-  return await signInWithEmailAndPassword(auth, email, password);
+/* ---------------------------------------
+   LOGIN (Firebase only)
+---------------------------------------- */
+export async function loginWithEmail(
+  email: string,
+  password: string
+): Promise<User> {
+  const cred = await signInWithEmailAndPassword(
+    auth,
+    email.trim().toLowerCase(),
+    password
+  );
+  await new Promise((r) => setTimeout(r, 800));
+  await createSession(); // backend session
+  startTokenAutoRefresh(); // 🔥 START AUTO REFRESH
+  return cred.user;
 }
 
+/* ---------------------------------------
+   PASSWORD RESET
+---------------------------------------- */
 export async function sendPasswordReset(email: string) {
   try {
-    await firebaseSendPasswordResetEmail(auth, email);
+    await firebaseSendPasswordResetEmail(auth, email.trim().toLowerCase());
     return true;
   } catch (error: any) {
     console.log("Password reset error:", error);
@@ -43,6 +94,20 @@ export async function sendPasswordReset(email: string) {
   }
 }
 
+/* ---------------------------------------
+   LOGOUT (Firebase only)
+---------------------------------------- */
 export async function logout() {
-  return await signOut(auth);
+  stopTokenAutoRefresh(); // 🔥 STOP LOOP
+
+  try {
+    await fetch(`${process.env.EXPO_PUBLIC_API_URL}/session`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+  } catch (err) {
+    console.log("⚠️ Failed to delete session cookie:", err);
+  }
+
+  return signOut(auth);
 }

@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import "dotenv/config";
 
 export default {
   expo: {
@@ -10,28 +10,47 @@ export default {
     scheme: "kaliptoconnect",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
+
     ios: {
-      supportsTablet: true
+      supportsTablet: true,
+      bundleIdentifier: "com.kaliptoconnect.app",
+      buildNumber: "1",
+      infoPlist: {
+        NSCameraUsageDescription:
+          "This app requires camera access to upload job site photos.",
+        NSPhotoLibraryUsageDescription:
+          "This app requires photo library access to upload job site photos.",
+        NSPhotoLibraryAddUsageDescription:
+          "This app needs permission to save photos.",
+        UIBackgroundModes: ["remote-notification"]
+      }
     },
+
     android: {
       package: "com.kaliptoconnect.app",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
-        foregroundImage: "./assets/images/Contractor_Application_Logo.png"
+        foregroundImage:
+          "./assets/images/Contractor_Application_Logo.png"
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false
     },
+
     web: {
       output: "static",
-      favicon: "./assets/images/favicon.png"
+      favicon:
+        "./assets/images/Contractor_Application_Logo.png"
     },
+
     plugins: [
       "expo-router",
+      "expo-notifications",
       [
         "expo-splash-screen",
         {
-          image: "./assets/images/splash-icon.png",
+          image:
+            "./assets/images/Contractor_Application_Logo.png",
           imageWidth: 200,
           resizeMode: "contain",
           backgroundColor: "#ffffff",
@@ -41,25 +60,35 @@ export default {
         }
       ]
     ],
+
     experiments: {
       typedRoutes: true,
       reactCompiler: true
     },
 
-    // ⭐ ENV VARIABLES + EAS PROJECT ID
     extra: {
-      EXPO_PUBLIC_FIREBASE_API_KEY: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-      EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      EXPO_PUBLIC_FIREBASE_PROJECT_ID: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-      EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      EXPO_PUBLIC_FIREBASE_APP_ID: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+      EXPO_PUBLIC_FIREBASE_API_KEY:
+        process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+      EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN:
+        process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      EXPO_PUBLIC_FIREBASE_PROJECT_ID:
+        process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+      EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET:
+        process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
+        process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      EXPO_PUBLIC_FIREBASE_APP_ID:
+        process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
       ENVIRONMENT: process.env.ENVIRONMENT,
-      CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
-      CLOUDINARY_UPLOAD_PRESET: process.env.CLOUDINARY_UPLOAD_PRESET,
-      EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+      CLOUDINARY_CLOUD_NAME:
+        process.env.CLOUDINARY_CLOUD_NAME,
+      CLOUDINARY_UPLOAD_PRESET:
+        process.env.CLOUDINARY_UPLOAD_PRESET,
+      EXPO_PUBLIC_API_URL:
+        process.env.EXPO_PUBLIC_API_URL,
       eas: {
-        projectId: "02d5e4e7-4256-4f56-bcac-1bfdac38117c"
+        projectId:
+          "02d5e4e7-4256-4f56-bcac-1bfdac38117c"
       }
     }
   }

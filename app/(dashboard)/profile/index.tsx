@@ -2,17 +2,18 @@ import { COLORS } from "@/constants/colors";
 import { logout } from "@/services/auth.service";
 import { getContractor } from "@/services/contractor.service";
 import { useAuthStore } from "@/store/auth.store";
-import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SettingsRow } from "../../../components/profile/SettingsRow";
 
 export default function ProfileOverview() {
   const user = useAuthStore((s) => s.user);
@@ -60,30 +61,8 @@ export default function ProfileOverview() {
     <>
       <ScrollView
         style={{ flex: 1, backgroundColor: COLORS.background }}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 120, paddingTop: 60 }}
       >
-        {/* HEADER */}
-        <View
-          style={{
-            paddingTop: 70,
-            paddingBottom: 20,
-            paddingHorizontal: 20,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 32,
-              fontWeight: "700",
-              color: COLORS.primaryDark,
-            }}
-          >
-            Profile
-          </Text>
-          <Text style={{ color: COLORS.primary, marginTop: 6 }}>
-            Manage your information
-          </Text>
-        </View>
-
         {/* AVATAR + NAME */}
         <View
           style={{
@@ -93,28 +72,30 @@ export default function ProfileOverview() {
         >
           <View
             style={{
-              width: 110,
-              height: 110,
-              borderRadius: 60,
-              backgroundColor: COLORS.primary,
+              width: 116,
+              height: 116,
+              borderRadius: 58,
+              borderWidth: 3,
+              borderColor: COLORS.primary,
               alignItems: "center",
               justifyContent: "center",
               marginBottom: 16,
-              shadowColor: "#000",
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 4 },
             }}
           >
-            <Text
+            <View
               style={{
-                color: "#fff",
-                fontSize: 40,
-                fontWeight: "700",
+                width: 104,
+                height: 104,
+                borderRadius: 52,
+                backgroundColor: COLORS.primary,
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              {initials}
-            </Text>
+              <Text style={{ color: "#fff", fontSize: 36, fontWeight: "700" }}>
+                {initials}
+              </Text>
+            </View>
           </View>
 
           <Text
@@ -132,90 +113,116 @@ export default function ProfileOverview() {
         </View>
 
         {/* PERSONAL DETAILS CARD */}
-        <TouchableOpacity
-          onPress={() => router.push("/(dashboard)/profile/details")}
+        {/* ACCOUNT SECTION */}
+        <View
           style={{
             backgroundColor: "#fff",
-            padding: 20,
             borderRadius: 18,
             marginHorizontal: 20,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            shadowColor: "#000",
-            shadowOpacity: 0.04,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 2 },
-            marginBottom: 16,
+            marginBottom: 24,
+            paddingHorizontal: 20,
           }}
         >
-          <Text style={{ fontSize: 16, fontWeight: "600" }}>
-            Personal Details
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: "700",
+              color: "#6B7280",
+              marginVertical: 14,
+            }}
+          >
+            Account
           </Text>
-          <Ionicons
-            name="chevron-forward"
-            size={22}
-            color={COLORS.primary}
-          />
-        </TouchableOpacity>
 
-        {/* DOCUMENTS CARD */}
-        <TouchableOpacity
-          onPress={() => router.push("/(dashboard)/profile/documents")}
-          style={{
-            backgroundColor: "#fff",
-            padding: 20,
-            borderRadius: 18,
-            marginHorizontal: 20,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            shadowColor: "#000",
-            shadowOpacity: 0.04,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 2 },
-            marginBottom: 20,
-          }}
-        >
-          <Text style={{ fontSize: 16, fontWeight: "600" }}>
-            Documents
-          </Text>
-          <Ionicons
-            name="chevron-forward"
-            size={22}
-            color={COLORS.primary}
+          <SettingsRow
+            label="Personal Details"
+            icon="person-outline"
+            onPress={() => router.push("/(dashboard)/profile/details")}
           />
-        </TouchableOpacity>
+
+          <View style={{ height: 1, backgroundColor: "#E5E7EB" }} />
+
+          <SettingsRow
+            label="Documents"
+            icon="folder-outline"
+            onPress={() => router.push("/(dashboard)/profile/documents")}
+          />
+        </View>
 
         {/* LOGOUT BUTTON */}
         <TouchableOpacity
           onPress={() => setShowLogout(true)}
           style={{
             marginHorizontal: 20,
-            backgroundColor: "#EF4444",
+            marginBottom: 40,
             paddingVertical: 14,
             borderRadius: 14,
             alignItems: "center",
-            flexDirection: "row",
-            justifyContent: "center",
-            gap: 10,
-            shadowColor: "#000",
-            shadowOpacity: 0.05,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 2 },
+            borderWidth: 1,
+            borderColor: "#EF4444",
           }}
         >
-          <Ionicons name="log-out-outline" size={22} color="#fff" />
           <Text
             style={{
-              color: "#fff",
+              color: "#EF4444",
               fontSize: 16,
               fontWeight: "700",
             }}
           >
-            Logout
+            Log Out
           </Text>
         </TouchableOpacity>
+
+        {/* LEGAL SECTION */}
+        <View
+          style={{
+            backgroundColor: "#fff",
+            borderRadius: 18,
+            marginHorizontal: 20,
+            marginBottom: 24,
+            paddingHorizontal: 20,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: "700",
+              color: "#6B7280",
+              marginVertical: 14,
+            }}
+          >
+            Legal
+          </Text>
+
+          <SettingsRow
+            label="Privacy Policy"
+            icon="shield-checkmark-outline"
+            onPress={() =>
+              Linking.openURL("https://yourdomain.com/privacy-policy")
+            }
+          />
+
+          <View style={{ height: 1, backgroundColor: "#E5E7EB" }} />
+
+          <SettingsRow
+            label="Terms of Service"
+            icon="document-text-outline"
+            onPress={() =>
+              Linking.openURL("https://yourdomain.com/terms-of-service")
+            }
+          />
+
+          <View style={{ height: 1, backgroundColor: "#E5E7EB" }} />
+
+          <SettingsRow
+            label="Delete Account"
+            icon="trash-outline"
+            danger
+            onPress={() =>
+              router.push("/(dashboard)/profile/delete-account")
+            }
+          />
+        </View>
       </ScrollView>
 
       {/* LOGOUT MODAL */}
@@ -225,24 +232,6 @@ export default function ProfileOverview() {
         setUser={setUser}
       />
     </>
-  );
-}
-
-function ProfileRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ marginBottom: 14 }}>
-      <Text style={{ color: "#6B7280", fontSize: 14 }}>{label}</Text>
-      <Text
-        style={{
-          fontSize: 16,
-          fontWeight: "600",
-          color: "#111",
-          marginTop: 2,
-        }}
-      >
-        {value}
-      </Text>
-    </View>
   );
 }
 

@@ -1,13 +1,41 @@
 import { COLORS } from "@/constants/colors";
+import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/auth.store";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, Tabs } from "expo-router";
+import { doc, onSnapshot } from "firebase/firestore";
+import { useEffect, useState } from "react";
 
 export default function DashboardLayout() {
   const user = useAuthStore((s) => s.user);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Protect dashboard
-  if (!user) return <Redirect href="/(auth)/login" />;
+  /* ---------------------------------------------------------- */
+  /*              Listen to unread count (Realtime)             */
+  /* ---------------------------------------------------------- */
+
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const conversationRef = doc(db, "conversations", user.uid);
+
+    const unsub = onSnapshot(conversationRef, (snapshot) => {
+      const data = snapshot.data();
+
+      if (data?.unreadCount?.contractor) {
+        setUnreadCount(data.unreadCount.contractor);
+      } else {
+        setUnreadCount(0);
+      }
+    });
+
+    return unsub;
+  }, [user?.uid]);
+
+  // ✅ Redirect AFTER hooks
+  if (!user) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
   return (
     <Tabs
@@ -28,7 +56,7 @@ export default function DashboardLayout() {
         name="home"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <Ionicons name="home" size={22} color={color} />
           ),
         }}
@@ -45,6 +73,26 @@ export default function DashboardLayout() {
       />
 
       <Tabs.Screen
+        name="messagesScreen"
+        options={{
+          title: "Message",
+          tabBarIcon: ({ color }) => (
+            <>
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={22}
+                color={color}
+              />
+
+              {unreadCount > 0 && (
+                <TabsBadge count={unreadCount} />
+              )}
+            </>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="photos"
         options={{
           title: "Photos",
@@ -55,25 +103,56 @@ export default function DashboardLayout() {
       />
 
       <Tabs.Screen
-        name="receipts"
-        options={{
-          title: "Receipts",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="image" size={22} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) => (
-            <Ionicons name="person-circle" size={24} color={color} />
+            <Ionicons
+              name="person-circle"
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
+
       <Tabs.Screen name="index" options={{ href: null }} />
     </Tabs>
   );
 }
+
+/* ---------------------------------------------------------- */
+/*                     Badge Component                        */
+/* ---------------------------------------------------------- */
+
+import { StyleSheet, Text, View } from "react-native";
+
+function TabsBadge({ count }: { count: number }) {
+  return (
+    <View style={styles.badge}>
+      <Text style={styles.badgeText}>
+        {count > 99 ? "99+" : count}
+      </Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    right: -8,
+    top: -4,
+    backgroundColor: "#EF4444",
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: "#ffffff",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+});

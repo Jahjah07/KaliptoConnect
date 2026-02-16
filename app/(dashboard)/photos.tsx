@@ -1,5 +1,7 @@
+import ProjectCard, { EmptyState } from "@/components/photos/ProjectTabCard";
 import { COLORS } from "@/constants/colors";
-import { fetchAllPhotos } from "@/services/photos.service";
+import { fetchProjectPhotos } from "@/services/photos.service";
+import { fetchContractorProjects } from "@/services/projects.service";
 import { Photo, ProjectPhotosGroup } from "@/types/photo";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
@@ -11,28 +13,48 @@ import {
   ScrollView,
   Text,
   TextInput,
-  TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 export default function PhotosScreen() {
-  const [all, setAll] = useState<ProjectPhotosGroup[]>([]);
-  const [projectFilter, setProjectFilter] = useState("all");
-  const [search, setSearch] = useState(""); // 🔍 search input
+  const [groups, setGroups] = useState<ProjectPhotosGroup[]>([]);
+  const [projectFilter, setProjectFilter] = useState<"all" | string>("all");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  /* -----------------------------
+     Load projects + photos
+  ------------------------------*/
   async function load() {
     try {
       setLoading(true);
-      const data = await fetchAllPhotos();
-      setAll(data);
+
+      const projects = await fetchContractorProjects();
+      const result: ProjectPhotosGroup[] = [];
+
+      for (const project of projects) {
+        const photos: Photo[] = await fetchProjectPhotos(project._id);
+
+        result.push({
+          projectId: project._id,
+          projectName: project.name,
+          photos,
+        });
+      }
+
+      setGroups(result);
     } catch (err) {
-      console.log("Failed to load all photos:", err);
+      console.log("Failed to load photos:", err);
+      setGroups([]);
     } finally {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -40,23 +62,24 @@ export default function PhotosScreen() {
     setRefreshing(false);
   }, []);
 
-  useEffect(() => {
-    load();
-  }, []);
+  /* -----------------------------
+     Derived data
+  ------------------------------*/
+  const allPhotos = groups.flatMap((g) => g.photos);
 
-  // 1️⃣ Filter by project
-  const filteredByProject: Photo[] =
+  const activePhotos =
     projectFilter === "all"
-      ? all.flatMap((p) => p.photos)
-      : all.find((p) => p.projectId === projectFilter)?.photos ?? [];
+      ? allPhotos
+      : groups.find((g) => g.projectId === projectFilter)?.photos ?? [];
 
-  // 2️⃣ Filter by search
-  const filteredPhotos = filteredByProject.filter((photo) => {
+  const filteredPhotos = activePhotos.filter((photo) => {
     const filename = photo.url.split("/").pop()?.toLowerCase() ?? "";
     return filename.includes(search.toLowerCase());
   });
 
-
+  /* -----------------------------
+     Loading state
+  ------------------------------*/
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -66,7 +89,13 @@ export default function PhotosScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+  <ScrollView
+    style={{ flex: 1, height: "100%", backgroundColor: COLORS.background }}
+    refreshControl={
+      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+    }
+  >  
+    <View style={{ flex: 1, backgroundColor: COLORS.background, height: "100%" }}>
       {/* HEADER */}
       <View style={{ paddingHorizontal: 24, paddingTop: 60, paddingBottom: 10 }}>
         <Text style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}>
@@ -77,7 +106,6 @@ export default function PhotosScreen() {
           {filteredPhotos.length} photos
         </Text>
 
-        {/* Icon */}
         <View
           style={{
             position: "absolute",
@@ -95,7 +123,7 @@ export default function PhotosScreen() {
         </View>
       </View>
 
-      {/* SEARCH BAR */}
+      {/* SEARCH */}
       <View
         style={{
           backgroundColor: "#F1F5F9",
@@ -117,44 +145,44 @@ export default function PhotosScreen() {
         />
       </View>
 
-      {/* FILTER CHIPS */}
-      <View style={{ paddingVertical: 10 }}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 20 }}
-        >
-          <FilterChip
-            label="All Projects"
-            active={projectFilter === "all"}
-            onPress={() => setProjectFilter("all")}
+      {/* PROJECT CARDS */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 12 }}
+      >
+        <ProjectCard
+          label="All Projects"
+          active={projectFilter === "all"}
+          subtitle={`${allPhotos.length} photos`}
+          onPress={() => setProjectFilter("all")}
+        />
+
+        {groups.map((p) => (
+          <ProjectCard
+            key={p.projectId}
+            label={p.projectName}
+            subtitle={
+              p.photos.length === 0
+                ? "No photos yet"
+                : `${p.photos.length} photos`
+            }
+            active={projectFilter === p.projectId}
+            onPress={() => setProjectFilter(p.projectId)}
           />
+        ))}
+      </ScrollView>
 
-          {all.map((p) => (
-            <FilterChip
-              key={p.projectId}
-              label={p.projectName}
-              active={projectFilter === p.projectId}
-              onPress={() => setProjectFilter(p.projectId)}
-            />
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* EMPTY STATE */}
+      {/* CONTENT */}
       {filteredPhotos.length === 0 ? (
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            marginTop: 80,
-          }}
-        >
-          <Ionicons name="image-outline" size={50} color="#9CA3AF" />
-          <Text style={{ fontSize: 18, color: "#6B7280", marginTop: 10 }}>
-            No photos found
-          </Text>
-        </View>
+        <EmptyState
+          title={
+            projectFilter === "all"
+              ? "No photos yet"
+              : "No photos for this project"
+          }
+          subtitle="Photos uploaded on site will appear here"
+        />
       ) : (
         <ScrollView
           refreshControl={
@@ -162,7 +190,6 @@ export default function PhotosScreen() {
           }
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
         >
-          {/* Photo Grid */}
           <View
             style={{
               flexDirection: "row",
@@ -177,58 +204,15 @@ export default function PhotosScreen() {
         </ScrollView>
       )}
     </View>
+  </ScrollView>
   );
 }
 
-/* -------------------------
-   FILTER CHIP COMPONENT
---------------------------*/
-function FilterChip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={{
-        alignSelf: "flex-start",
-        paddingVertical: 6,
-        paddingHorizontal: 14,
-        backgroundColor: active ? COLORS.primary : "#E5E7EB",
-        borderRadius: 18,
-        marginRight: 10,
-      }}
-    >
-      <Text
-        style={{
-          color: active ? "#fff" : "#374151",
-          fontWeight: "600",
-        }}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
-/* -------------------------
-   FADE-IN IMAGE COMPONENT
---------------------------*/
+/* -----------------------------
+   FADE-IN IMAGE
+------------------------------*/
 function FadeInImage({ uri }: { uri: string }) {
   const opacity = new Animated.Value(0);
-
-  const onLoad = () => {
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
 
   return (
     <Animated.View
@@ -240,15 +224,17 @@ function FadeInImage({ uri }: { uri: string }) {
         marginBottom: 16,
         backgroundColor: "#f1f1f1",
         opacity,
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
       }}
     >
       <Image
         source={{ uri }}
-        onLoad={onLoad}
+        onLoad={() =>
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start()
+        }
         style={{ width: "100%", height: "100%" }}
         resizeMode="cover"
       />

@@ -1,51 +1,56 @@
-import { runOCR } from "@/services/ocr.service";
-import { extractReceiptDataText } from "@/utils/extractReceiptData";
+import { uploadReceipt } from "@/services/receipts.service";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
 import { useState } from "react";
 
 export function useReceiptUpload(projectId?: string) {
-  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const takeReceiptPhoto = async () => {
-    if (!projectId) return false;
+    if (!projectId) {
+      console.log("❌ No project ID provided.");
+      return false;
+    }
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
-      alert("Camera permission required");
+      alert("Camera permission is required.");
       return false;
     }
 
     const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.6,
       base64: true,
-      quality: 0.8,
     });
 
     if (result.canceled) return false;
 
-    const base64 = result.assets[0].base64!;
-    const dataURL = `data:image/jpeg;base64,${base64}`;
+    const base64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
 
-    setLoading(true);
+    setUploading(true);
+    setSuccess(false);
 
     try {
-      const rawText = await runOCR(dataURL);
-      const { amount, store, date } = extractReceiptDataText(rawText);
+      // 🧾 Upload directly — no OCR
+      await uploadReceipt(projectId, base64);
 
-      // ⭐ RELATIVE ROUTE WITH TYPESCRIPT OVERRIDE
-      router.push(
-        `review?base64=${encodeURIComponent(dataURL)}&amount=${amount}&store=${encodeURIComponent(store)}&date=${date}` as any
-      );
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 1500);
 
       return true;
     } catch (err) {
-      console.log("OCR failed:", err);
-      alert("Failed to scan receipt");
+      console.error("Receipt upload failed:", err);
+      alert("Failed to upload receipt");
       return false;
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
-  return { takeReceiptPhoto, loading };
+  return {
+    takeReceiptPhoto,
+    uploading,
+    success,
+  };
 }

@@ -12,7 +12,7 @@ interface Props {
 }
 
 const statusColors: any = {
-  Active: "#22C55E",
+  Ongoing: "#22C55E",
   Pending: "#F59E0B",
   Completed: "#3B82F6",
 };
@@ -23,7 +23,10 @@ export default function ProjectListCard({ id, name, address, status }: Props) {
 
   return (
     <TouchableOpacity
-      onPress={() => router.push(`/(dashboard)/project/${id}`)}
+      onPress={() => id && router.push({
+        pathname: "/(dashboard)/project/[id]",
+        params: { id },
+      })}
         style={{
           backgroundColor: "#fff",
           padding: 18,

@@ -237,7 +237,7 @@ export default function Login() {
               fontWeight: "500",
             }}
           >
-            Don't have an account? Create one
+            Don&apos;t have an account? Create one
           </Text>
         </TouchableOpacity>
       </View>

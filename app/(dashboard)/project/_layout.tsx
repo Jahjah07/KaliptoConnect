@@ -1,7 +1,10 @@
 import { Stack } from "expo-router";
 
-export default function ProjectStack() {
+export default function ProjectLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }} />
+    <Stack>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="[id]" />
+    </Stack>
   );
 }

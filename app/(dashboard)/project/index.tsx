@@ -15,7 +15,14 @@ export default function ProjectsScreen() {
   async function loadProjects() {
     try {
       const data = await fetchContractorProjects();
-      setProjects(data || []);
+
+      const sorted = [...(data || [])].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() -
+          new Date(a.createdAt).getTime()
+      );
+
+      setProjects(sorted);
     } catch (err) {
       console.log("Error loading projects:", err);
     }

@@ -11,6 +11,7 @@ async function authHeader() {
 
   const token = await user.getIdToken();
   return {
+    credentials: "include",
     headers: {
       Authorization: `Bearer ${token}`,
     },

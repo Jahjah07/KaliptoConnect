@@ -8,6 +8,7 @@ import React, { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Text,
   TextInput,
@@ -35,15 +36,21 @@ export default function Register() {
     alignSelf: "center",
   };
 
+  const emailValid = /^\S+@\S+\.\S+$/.test(email);
+  const formValid = name.trim() && emailValid && password.length >= 6;
+
   const onRegister = async () => {
-    if (!name || !email || !password) {
-      Alert.alert("Missing fields", "Please fill in all fields.");
+    if (!formValid) {
+      Alert.alert(
+        "Invalid details",
+        "Please enter a valid name, email and password (min 6 characters)."
+      );
       return;
     }
 
     setLoading(true);
     try {
-      const res = await registerWithEmail(email, password, name);
+      await registerWithEmail(email.trim(), password, name.trim());
       router.replace("/");
     } catch (err: any) {
       Alert.alert("Registration Failed", err.message || "Unable to register");
@@ -63,15 +70,7 @@ export default function Register() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* Header */}
-      <View
-        style={[
-          containerStyle,
-          {
-            marginBottom: 28,
-            gap: 6,
-          },
-        ]}
-      >
+      <View style={[containerStyle, { marginBottom: 28, gap: 6 }]}>
         <Text
           style={{
             fontSize: 28,
@@ -114,22 +113,11 @@ export default function Register() {
             autoCapitalize="words"
             value={name}
             onChangeText={setName}
-            style={{
-              borderWidth: 1.2,
-              borderColor: "#E5E7EB",
-              height: 50,
-              borderRadius: 12,
-              paddingHorizontal: 46,
-              backgroundColor: "#F9FAFB",
-            }}
+            returnKeyType="next"
+            style={inputStyle}
           />
 
-          <Ionicons
-            name="person-outline"
-            size={20}
-            color="#6B7280"
-            style={{ position: "absolute", left: 14, top: 38 }}
-          />
+          <Ionicons name="person-outline" size={20} color="#6B7280" style={iconLeft} />
         </View>
 
         {/* Email */}
@@ -144,26 +132,14 @@ export default function Register() {
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
-            style={{
-              borderWidth: 1.2,
-              borderColor: "#E5E7EB",
-              height: 50,
-              borderRadius: 12,
-              paddingHorizontal: 46,
-              backgroundColor: "#F9FAFB",
-            }}
+            returnKeyType="next"
+            style={[
+              inputStyle,
+              email.length > 0 && !emailValid && { borderColor: COLORS.error },
+            ]}
           />
 
-          <Ionicons
-            name="mail-outline"
-            size={20}
-            color="#6B7280"
-            style={{
-              position: "absolute",
-              left: 14,
-              top: 38,
-            }}
-          />
+          <Ionicons name="mail-outline" size={20} color="#6B7280" style={iconLeft} />
         </View>
 
         {/* Password */}
@@ -177,37 +153,16 @@ export default function Register() {
             secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
-            style={{
-              borderWidth: 1.2,
-              borderColor: "#E5E7EB",
-              height: 50,
-              borderRadius: 12,
-              paddingHorizontal: 46,
-              paddingRight: 44,
-              backgroundColor: "#F9FAFB",
-            }}
+            returnKeyType="done"
+            style={[
+              inputStyle,
+              password.length > 0 && password.length < 6 && { borderColor: COLORS.error },
+            ]}
           />
 
-          <Ionicons
-            name="lock-closed-outline"
-            size={20}
-            color="#6B7280"
-            style={{
-              position: "absolute",
-              left: 14,
-              top: 38,
-            }}
-          />
+          <Ionicons name="lock-closed-outline" size={20} color="#6B7280" style={iconLeft} />
 
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
-            style={{
-              position: "absolute",
-              right: 14,
-              top: 34,
-              padding: 6,
-            }}
-          >
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={iconRight}>
             <Ionicons
               name={showPassword ? "eye-off-outline" : "eye-outline"}
               size={20}
@@ -215,26 +170,27 @@ export default function Register() {
             />
           </TouchableOpacity>
         </View>
-
+        <Text style={{ fontSize: 12, color: "#666", marginBottom: 16 }}>
+          By continuing, you agree to our{" "}
+          <Text
+            style={{ color: "#007AFF" }}
+            onPress={() =>
+              Linking.openURL("https://yourdomain.com/privacy-policy")
+            }
+          >
+            Privacy Policy
+          </Text>
+        </Text>
         {/* CTA */}
         <Button
           title={loading ? "Creating account..." : "Create Account"}
           onPress={onRegister}
-          disabled={loading}
+          disabled={loading || !formValid}
         />
 
         {/* Redirect */}
-        <TouchableOpacity
-          onPress={() => router.push("/login")}
-          style={{ marginTop: 20 }}
-        >
-          <Text
-            style={{
-              textAlign: "center",
-              color: COLORS.primary,
-              fontWeight: "500",
-            }}
-          >
+        <TouchableOpacity onPress={() => router.push("/login")} style={{ marginTop: 20 }}>
+          <Text style={{ textAlign: "center", color: COLORS.primary, fontWeight: "500" }}>
             Already have an account? Sign in
           </Text>
         </TouchableOpacity>
@@ -242,3 +198,27 @@ export default function Register() {
     </KeyboardAvoidingView>
   );
 }
+
+/* ------------------ Styles ------------------ */
+
+const inputStyle = {
+  borderWidth: 1.2,
+  borderColor: "#E5E7EB",
+  height: 50,
+  borderRadius: 12,
+  paddingHorizontal: 46,
+  backgroundColor: "#F9FAFB",
+};
+
+const iconLeft = {
+  position: "absolute" as const,
+  left: 14,
+  top: 38,
+};
+
+const iconRight = {
+  position: "absolute" as const,
+  right: 14,
+  top: 34,
+  padding: 6,
+};

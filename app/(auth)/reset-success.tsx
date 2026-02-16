@@ -3,12 +3,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 
 export default function ResetSuccess() {
@@ -65,7 +65,7 @@ export default function ResetSuccess() {
           marginBottom: 28,
         }}
       >
-        We’ve sent password reset instructions to your email. Follow the link to
+        We&apos;ve sent password reset instructions to your email. Follow the link to
         create a new password.
       </Text>
 

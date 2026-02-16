@@ -1,17 +1,28 @@
 import { auth } from "@/lib/firebase";
 import Constants from "expo-constants";
 
+/* ----------------------------------------
+   API BASE
+----------------------------------------- */
+
 const API_URL =
   Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ||
   "https://crm-system-gray.vercel.app/api";
 
 /* ----------------------------------------
-🔒 WAIT FOR AUTH RESTORE
+   WAIT FOR AUTH RESTORE
 ----------------------------------------- */
-function waitForAuth(): Promise<any> {
-  return new Promise((resolve) => {
+
+function waitForAuth(timeout = 5000): Promise<import("firebase/auth").User> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      unsub();
+      reject(new Error("Auth timeout"));
+    }, timeout);
+
     const unsub = auth.onAuthStateChanged((user) => {
       if (user) {
+        clearTimeout(timer);
         unsub();
         resolve(user);
       }
@@ -20,108 +31,256 @@ function waitForAuth(): Promise<any> {
 }
 
 /* ----------------------------------------
-🔒 GET FRESH TOKEN SAFE
+   GET VALID TOKEN
 ----------------------------------------- */
-async function getValidToken() {
+
+async function getValidToken(): Promise<string> {
   let user = auth.currentUser;
+  if (!user) user = await waitForAuth();
 
-  // If no user yet, wait for Firebase to restore session
-  if (!user) {
-    user = await waitForAuth();
+  try {
+    return await user!.getIdToken(true);
+  } catch {
+    await auth.signOut();
+    throw new Error("Session expired. Please log in again.");
   }
-
-  // Get fresh token
-  const token = await user!.getIdToken(true);
-
-  if (!token) throw new Error("Unable to get Firebase token");
-  return token;
 }
 
 /* ----------------------------------------
-🔒 ALWAYS SEND VALID HEADERS
+   UNIVERSAL SECURE FETCH
 ----------------------------------------- */
-async function authHeaders() {
+
+async function secureFetch(
+  url: string,
+  options: RequestInit = {},
+  retry = true
+) {
   const token = await getValidToken();
-  return {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
+
+  const doFetch = async (authToken: string) => {
+    const headers = new Headers(options.headers || {});
+    headers.set("Authorization", `Bearer ${authToken}`);
+    headers.set("Content-Type", "application/json");
+
+    return fetch(url, {
+      ...options,
+      headers,
+    });
   };
-}
 
-/* ----------------------------------------
-🔁 UNIVERSAL FETCH WRAPPER WITH RETRY
------------------------------------------ */
-async function secureFetch(url: string, options: any = {}, retry = true) {
-  let res = await fetch(url, options);
+  let res = await doFetch(token);
 
-  // If token expired or invalid → REFRESH once then retry automatically
+  // Retry once if token expired
   if (res.status === 401 && retry) {
-    console.log("🔄 Retrying API call with new token...");
-    const newHeaders = await authHeaders();
-    res = await fetch(url, { ...options, headers: newHeaders });
+    const fresh = await getValidToken();
+    res = await doFetch(fresh);
   }
 
   if (!res.ok) {
-    const err = await res.text();
-    console.log("❌ API Error:", err);
-    throw new Error(err);
+    const text = await res.text();
+
+    console.error("❌ API ERROR", {
+      url,
+      status: res.status,
+      body: text,
+    });
+
+    throw new Error(
+      text || `Request failed with status ${res.status}`
+    );
   }
 
-  return res.json();
+  const type = res.headers.get("content-type") || "";
+  return type.includes("application/json") ? res.json() : null;
 }
 
 /* ----------------------------------------
-1. CREATE CONTRACTOR
+   TYPES
 ----------------------------------------- */
-export async function createContractor(payload: { name: string; email: string }) {
+
+export type AllowedDocumentField =
+  | "abn"
+  | "contractorLicense"
+  | "validId"
+  | "publicLiabilityCopy"
+  | "workersInsuranceCopy";
+
+/* ----------------------------------------
+   CONTRACTOR CORE
+----------------------------------------- */
+
+export async function createContractor(payload: {
+  name: string;
+  email: string;
+}) {
   return secureFetch(`${API_URL}/mobile/contractor`, {
     method: "POST",
-    headers: await authHeaders(),
     body: JSON.stringify(payload),
   });
 }
 
-/* ----------------------------------------
-2. GET CONTRACTOR
------------------------------------------ */
 export async function getContractor() {
-  return secureFetch(`${API_URL}/mobile/contractor`, {
-    headers: await authHeaders(),
-  });
+  const contractor = await secureFetch(`${API_URL}/mobile/contractor`);
+  return contractor;
 }
 
-/* ----------------------------------------
-3. UPDATE PROFILE
------------------------------------------ */
-export async function updateContractorProfile(updates: Record<string, any>) {
+export async function updateContractorProfile(
+  updates: Record<string, unknown>
+) {
   return secureFetch(`${API_URL}/mobile/contractor/update`, {
     method: "PUT",
-    headers: await authHeaders(),
     body: JSON.stringify(updates),
   });
 }
 
-/* ----------------------------------------
-4. UPDATE DOCUMENT
------------------------------------------ */
-export async function updateContractorDocument(
-  field: string,
-  fileUrl: string,
-  expiry?: string
-) {
-  return secureFetch(`${API_URL}/mobile/contractor/documents`, {
-    method: "PUT",
-    headers: await authHeaders(),
-    body: JSON.stringify({ field, fileUrl, expiry }),
+export async function deleteContractor() {
+  return secureFetch(`${API_URL}/mobile/contractor/delete`, {
+    method: "DELETE",
   });
 }
 
 /* ----------------------------------------
-5. DELETE ACCOUNT
+   DOCUMENTS — R2 UPLOAD
 ----------------------------------------- */
-export async function deleteContractor() {
-  return secureFetch(`${API_URL}/mobile/contractor/delete`, {
-    method: "DELETE",
-    headers: await authHeaders(),
+
+/**
+ * Uploads base64 document to Cloudflare R2
+ * Returns public URL + objectKey
+ */
+export async function uploadContractorDocument(
+  field: AllowedDocumentField,
+  base64: string
+): Promise<{ fileUrl: string; objectKey: string }> {
+  return secureFetch(`${API_URL}/mobile/contractor/documents/upload`, {
+    method: "POST",
+    body: JSON.stringify({
+      field,
+      image: base64,
+    }),
   });
+}
+
+export function uploadContractorDocumentWithProgress(
+  field: AllowedDocumentField,
+  base64: string,
+  onProgress: (percent: number) => void
+): Promise<{ fileUrl: string; objectKey: string }> {
+  return new Promise(async (resolve, reject) => {
+    const token = await getValidToken();
+
+    const xhr = new XMLHttpRequest();
+    xhr.open(
+      "POST",
+      `${API_URL}/mobile/contractor/documents/upload`
+    );
+
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.setRequestHeader("Content-Type", "application/json");
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round(
+          (event.loaded / event.total) * 100
+        );
+        onProgress(percent);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        reject(new Error("Upload failed"));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Network error"));
+
+    xhr.send(
+      JSON.stringify({
+        field,
+        image: base64,
+      })
+    );
+  });
+}
+
+/* ----------------------------------------
+   DOCUMENTS — SAVE METADATA
+----------------------------------------- */
+
+/**
+ * Saves document metadata to MongoDB
+ * (URL, objectKey, expiry)
+ */
+export async function saveContractorDocumentMetadata(params: {
+  field: AllowedDocumentField;
+  fileUrl?: string;
+  objectKey?: string;
+  expiry?: string; // YYYY-MM-DD
+}) {
+  return secureFetch(`${API_URL}/mobile/contractor/documents`, {
+    method: "PUT",
+    body: JSON.stringify(params),
+  });
+}
+
+/* ----------------------------------------
+   DOCUMENTS — DELETE
+----------------------------------------- */
+
+/**
+ * Deletes document from R2 and clears MongoDB fields
+ */
+export async function deleteContractorDocument(
+  field: AllowedDocumentField
+) {
+  return secureFetch(`${API_URL}/mobile/contractor/documents`, {
+    method: "DELETE",
+    body: JSON.stringify({ field }),
+  });
+}
+
+/* ----------------------------------------
+   DOCUMENTS — REPLACE (HELPER)
+----------------------------------------- */
+
+/**
+ * Convenience helper:
+ * delete → upload → save metadata
+ */
+export async function replaceContractorDocument(params: {
+  field: AllowedDocumentField;
+  base64: string;
+  expiry?: string;
+}) {
+  const { field, base64, expiry } = params;
+
+  // 1️⃣ Delete existing
+  await deleteContractorDocument(field);
+
+  // 2️⃣ Upload new
+  const { fileUrl, objectKey } =
+    await uploadContractorDocument(field, base64);
+
+  // 3️⃣ Save metadata
+  return saveContractorDocumentMetadata({
+    field,
+    fileUrl,
+    objectKey,
+    expiry,
+  });
+}
+
+export async function getContractorDocumentPresign(params: {
+  field: AllowedDocumentField;
+  mimeType: string;
+}): Promise<{ uploadUrl: string; objectKey: string }> {
+  return secureFetch(
+    `${API_URL}/mobile/contractor/documents/presign`,
+    {
+      method: "POST",
+      body: JSON.stringify(params),
+    }
+  );
 }
