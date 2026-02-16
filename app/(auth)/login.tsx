@@ -126,6 +126,7 @@ export default function Login() {
 
           <TextInput
             placeholder="example@email.com"
+            placeholderTextColor="#000"
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
@@ -159,13 +160,15 @@ export default function Login() {
           </Text>
 
           <TextInput
-            placeholder="••••••••"
+            placeholder="password"
+            placeholderTextColor="#000"
             secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
             style={{
               borderWidth: 1.2,
               borderColor: "#E5E7EB",
+              color: "#000",
               height: 50,
               borderRadius: 12,
               paddingHorizontal: 46,

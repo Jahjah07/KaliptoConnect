@@ -15,6 +15,7 @@ export default {
       supportsTablet: true,
       bundleIdentifier: "com.kaliptoconnect.app",
       buildNumber: "1",
+      googleServicesFile: "./GoogleService-Info.plist",
       infoPlist: {
         NSCameraUsageDescription:
           "This app requires camera access to upload job site photos.",
@@ -28,6 +29,7 @@ export default {
 
     android: {
       package: "com.kaliptoconnect.app",
+      googleServicesFile: "./google-services.json",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage:
