@@ -1,6 +1,8 @@
 import MessageBubble from "@/components/message/MessageBubble";
 import { auth, db } from "@/lib/firebase";
 import { Feather } from "@expo/vector-icons";
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   addDoc,
@@ -78,9 +80,20 @@ export default function MessagesScreen() {
   /* ---------------------------------------------------------- */
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUid(user.uid);
+
+        if (Device.isDevice) {
+          const { status } = await Notifications.requestPermissionsAsync();
+          if (status !== "granted") {
+            console.log("Permission not granted");
+            return;
+          }
+
+          const token = await Notifications.getExpoPushTokenAsync();
+          alert(token.data);
+        }
       }
     });
 
@@ -257,8 +270,9 @@ export default function MessagesScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: "#F7F7F7" }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* Header */}
         <View style={styles.header}>

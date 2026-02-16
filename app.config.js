@@ -30,6 +30,7 @@ export default {
     android: {
       package: "com.kaliptoconnect.app",
       googleServicesFile: "./google-services.json",
+      softwareKeyboardLayoutMode: "resize",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage:
