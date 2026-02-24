@@ -3,6 +3,7 @@
 import { ReceiptCard } from "@/components/receipts/ReceiptCard";
 import { COLORS } from "@/constants/colors";
 import { useReceiptUpload } from "@/hooks/useReceiptUpload";
+import { fetchProjectById } from "@/services/projects.service";
 import { fetchProjectReceipts } from "@/services/receipts.service";
 import { Receipt } from "@/types/receipt";
 import { Ionicons } from "@expo/vector-icons";
@@ -30,7 +31,7 @@ export default function ProjectReceiptsScreen() {
 
   const navigation = useNavigation();
   const scrollRef = useRef<ScrollView>(null);
-
+  const [contractorStatus, setContractorStatus] = useState<string | null>(null);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,10 +48,14 @@ export default function ProjectReceiptsScreen() {
 
     try {
       setPageLoading(true);
-      const data = await fetchProjectReceipts(projectId);
-      setReceipts(data);
+      const [receiptData, projectData] = await Promise.all([
+        fetchProjectReceipts(projectId),
+        fetchProjectById(projectId), // 🔥 add this
+      ]);
+      setReceipts(receiptData);
+      setContractorStatus(projectData.contractorStatus);
     } catch (err) {
-      console.log("Failed to fetch receipts:", err);
+      // error handled silently
     } finally {
       setPageLoading(false);
     }
@@ -194,26 +199,49 @@ export default function ProjectReceiptsScreen() {
         </ScrollView>
       )}
 
-      {/* CAMERA BUTTON */}
-      <TouchableOpacity
-        onPress={takeReceiptPhoto}
+    {/* BOTTOM ACTION BAR */}
+    {contractorStatus !== "Completed" && (
+      <View
         style={{
           position: "absolute",
-          bottom: 30,
-          right: 20,
-          backgroundColor: COLORS.primary,
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          justifyContent: "center",
-          alignItems: "center",
-          elevation: 8,
-          zIndex: 999,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: 20,
+          backgroundColor: "#fff",
+          borderTopWidth: 1,
+          borderTopColor: "#E5E7EB",
         }}
       >
-        <Ionicons name="camera" size={30} color="#fff" />
-      </TouchableOpacity>
-
+        <TouchableOpacity
+          onPress={takeReceiptPhoto}
+          style={{
+            backgroundColor: COLORS.primary,
+            paddingVertical: 16,
+            borderRadius: 14,
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "row",
+          }}
+        >
+          <Ionicons
+            name="camera-outline"
+            size={20}
+            color="#fff"
+            style={{ marginRight: 8 }}
+          />
+          <Text
+            style={{
+              color: "#fff",
+              fontWeight: "700",
+              fontSize: 16,
+            }}
+          >
+            Add Receipt
+          </Text>
+        </TouchableOpacity>
+      </View>
+    )}
       {/* UPLOADING OVERLAY */}
       {uploading && (
         <View

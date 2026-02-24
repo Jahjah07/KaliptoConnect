@@ -13,6 +13,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  TouchableOpacity,
   View
 } from "react-native";
 
@@ -22,7 +23,14 @@ export default function PhotosScreen() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const sortedGroups = [...groups].sort((a, b) => {
+    const diff =
+      new Date(b.createdAt).getTime() -
+      new Date(a.createdAt).getTime();
 
+    return sortOrder === "newest" ? diff : -diff;
+  });
   /* -----------------------------
      Load projects + photos
   ------------------------------*/
@@ -31,21 +39,22 @@ export default function PhotosScreen() {
       setLoading(true);
 
       const projects = await fetchContractorProjects();
-      const result: ProjectPhotosGroup[] = [];
 
-      for (const project of projects) {
-        const photos: Photo[] = await fetchProjectPhotos(project._id);
+      const result: ProjectPhotosGroup[] = await Promise.all(
+        projects.map(async (project) => {
+          const photos: Photo[] = await fetchProjectPhotos(project._id);
 
-        result.push({
-          projectId: project._id,
-          projectName: project.name,
-          photos,
-        });
-      }
+          return {
+            projectId: project._id,
+            projectName: project.name,
+            photos,
+            createdAt: project.createdAt,
+          };
+        })
+      );
 
       setGroups(result);
     } catch (err) {
-      console.log("Failed to load photos:", err);
       setGroups([]);
     } finally {
       setLoading(false);
@@ -97,30 +106,68 @@ export default function PhotosScreen() {
   >  
     <View style={{ flex: 1, backgroundColor: COLORS.background, height: "100%" }}>
       {/* HEADER */}
-      <View style={{ paddingHorizontal: 24, paddingTop: 60, paddingBottom: 10 }}>
-        <Text style={{ fontSize: 26, fontWeight: "700", color: COLORS.primaryDark }}>
-          Site Photos
-        </Text>
-
-        <Text style={{ color: COLORS.primary, marginTop: 2 }}>
-          {filteredPhotos.length} photos
-        </Text>
-
+      <View
+        style={{
+          paddingHorizontal: 24,
+          paddingTop: 60,
+          paddingBottom: 10,
+        }}
+      >
+        {/* Top Row */}
         <View
           style={{
-            position: "absolute",
-            right: 24,
-            top: 60,
-            width: 46,
-            height: 46,
-            borderRadius: 23,
-            backgroundColor: COLORS.primary,
-            justifyContent: "center",
+            flexDirection: "row",
+            justifyContent: "space-between",
             alignItems: "center",
           }}
         >
-          <Ionicons name="camera" size={24} color="#fff" />
+          <Text
+            style={{
+              fontSize: 26,
+              fontWeight: "700",
+              color: COLORS.primaryDark,
+            }}
+          >
+            Site Photos
+          </Text>
+
+          <TouchableOpacity
+            onPress={() =>
+              setSortOrder((prev) =>
+                prev === "newest" ? "oldest" : "newest"
+              )
+            }
+            style={{
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: 20,
+              backgroundColor: "#F3F4F6",
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons
+              name={sortOrder === "newest" ? "arrow-down" : "arrow-up"}
+              size={16}
+              color="#374151"
+            />
+            <Text
+              style={{
+                marginLeft: 6,
+                fontSize: 12,
+                fontWeight: "600",
+                color: "#374151",
+              }}
+            >
+              {sortOrder === "newest" ? "Newest" : "Oldest"}
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Subtitle */}
+        <Text style={{ color: COLORS.primary, marginTop: 4 }}>
+          {filteredPhotos.length} photos
+        </Text>
       </View>
 
       {/* SEARCH */}
@@ -158,7 +205,7 @@ export default function PhotosScreen() {
           onPress={() => setProjectFilter("all")}
         />
 
-        {groups.map((p) => (
+        {sortedGroups.map((p) => (
           <ProjectCard
             key={p.projectId}
             label={p.projectName}

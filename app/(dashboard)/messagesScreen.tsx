@@ -32,6 +32,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 
 interface Message {
   id: string;
@@ -88,10 +89,17 @@ export default function MessagesScreen() {
         if (Device.isDevice) {
           const { status } = await Notifications.requestPermissionsAsync();
           if (status !== "granted") {
-            alert("Permission not granted");
+            Toast.show({
+              type: "error",
+              text1: "Permission Required",
+              text2: "Notification permission not granted",
+            });
             return;
           }
         }
+      } else {
+        setUid(null); // 🔥 critical
+        setMessages([]); // optional cleanup
       }
     });
 
@@ -110,37 +118,44 @@ export default function MessagesScreen() {
       orderBy("createdAt", "asc")
     );
 
-    const unsub = onSnapshot(q, async (snapshot) => {
-      const msgs: Message[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Message[];
+    const unsub = onSnapshot(
+      q,
+      async (snapshot) => {
+        const msgs: Message[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Message[];
 
-      LayoutAnimation.configureNext(
-        LayoutAnimation.Presets.easeInEaseOut
-      );
+        LayoutAnimation.configureNext(
+          LayoutAnimation.Presets.easeInEaseOut
+        );
 
-      setMessages(msgs);
+        setMessages(msgs);
 
-      // Mark admin messages as read
-      snapshot.docs.forEach((docSnap) => {
-        const data = docSnap.data();
+        // Mark admin messages as read
+        snapshot.docs.forEach((docSnap) => {
+          if (!auth.currentUser) return;
+          const data = docSnap.data();
 
-        if (
-          data.senderRole === "admin" &&
-          !data.readBy?.includes(uid)
-        ) {
-          updateDoc(docSnap.ref, {
-            readBy: [...(data.readBy || []), uid],
-          });
-        }
-      });
-      
+          if (
+            data.senderRole === "admin" &&
+            !data.readBy?.includes(uid)
+          ) {
+            updateDoc(docSnap.ref, {
+              readBy: [...(data.readBy || []), uid],
+            });
+          }
+        });
+        
 
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    });
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      },
+      (error) => {
+        // error handled silently
+      }
+    );
 
     return unsub;
   }, [uid]);
@@ -151,14 +166,14 @@ export default function MessagesScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      if (!uid) return;
+      if (!auth.currentUser) return;
 
-      const conversationRef = doc(db, "conversations", uid);
+      const conversationRef = doc(db, "conversations", auth.currentUser.uid);
 
       updateDoc(conversationRef, {
         "unreadCount.contractor": 0,
       }).catch(() => {});
-    }, [uid])
+    }, [])
   );
 
   /* ---------------------------------------------------------- */
@@ -166,20 +181,22 @@ export default function MessagesScreen() {
   /* ---------------------------------------------------------- */
 
   useEffect(() => {
-    if (!uid) return;
+    if (!uid || !auth.currentUser) return;
 
     const presenceRef = doc(db, "presence", uid);
 
     setDoc(presenceRef, {
       online: true,
       lastSeen: serverTimestamp(),
-    });
+    }).catch(() => {});
 
     return () => {
-      setDoc(presenceRef, {
+      if (!auth.currentUser) return;
+
+      setDoc(doc(db, "presence", uid), {
         online: false,
         lastSeen: serverTimestamp(),
-      });
+      }).catch(() => {});
     };
   }, [uid]);
 
@@ -192,33 +209,37 @@ export default function MessagesScreen() {
 
     const conversationRef = doc(db, "conversations", uid);
 
-    await addDoc(
-      collection(conversationRef, "messages"),
-      {
-        senderId: uid,
-        senderRole: "contractor",
-        text,
-        createdAt: serverTimestamp(),
-        readBy: [],
-      }
-    );
+    try {
+      await addDoc(
+        collection(conversationRef, "messages"),
+        {
+          senderId: uid,
+          senderRole: "contractor",
+          text,
+          createdAt: serverTimestamp(),
+          readBy: [],
+        }
+      );
 
-    await setDoc(
-      conversationRef,
-      {
-        contractorId: uid,
-        lastMessage: text,
-        lastMessageAt: serverTimestamp(),
-        unreadCount: {
-          contractor: 0,
-          crm: increment(1),
+      await setDoc(
+        conversationRef,
+        {
+          contractorId: uid,
+          lastMessage: text,
+          lastMessageAt: serverTimestamp(),
+          unreadCount: {
+            contractor: 0,
+            crm: increment(1),
+          },
+          updatedAt: serverTimestamp(),
         },
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+        { merge: true }
+      );
 
-    setText("");
+      setText("");
+    } catch (err) {
+      // error handled silently
+    }
   };
 
   /* ---------------------------------------------------------- */

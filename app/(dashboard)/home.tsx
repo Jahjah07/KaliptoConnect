@@ -62,7 +62,7 @@ export default function Home() {
       setContractor(contractorData);
       setStats(statsData);
     } catch (err) {
-      console.log("❌ Refresh error:", err);
+      // error handled silently
     }
   };
 
@@ -162,7 +162,7 @@ export default function Home() {
 
   // 📌 FILTERS
   const currentProjects = projects
-    .filter((p) => p.status === "Pending" || p.status === "Ongoing")
+    .filter((p) => p.contractorStatus === "Pending" || p.contractorStatus === "Ongoing")
     .sort(
       (a, b) =>
         new Date(b.createdAt).getTime() -
@@ -170,14 +170,14 @@ export default function Home() {
     );
 
   const recentProjects = projects
-    .filter((p) => p.status === "Completed" || p.status === "Cancelled")
+    .filter((p) => p.contractorStatus === "Completed")
     .sort(
       (a, b) =>
         new Date(b.createdAt).getTime() -
         new Date(a.createdAt).getTime()
     )
     .slice(0, 6);
-
+  
   const onRefresh = async () => {
     setRefreshing(true);
     await reloadDashboard();
@@ -446,7 +446,8 @@ export default function Home() {
               key={p._id}
               id={p._id}
               name={p.name}
-              status={p.status}
+              projectStatus={p.status}
+              assignmentStatus={p.contractorStatus}
             />
           ))
         )}
@@ -485,7 +486,8 @@ export default function Home() {
               key={p._id}
               id={p._id}
               name={p.name}
-              status={p.status}
+              projectStatus={p.status}
+              assignmentStatus={p.contractorStatus}
             />
           ))
         )}

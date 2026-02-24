@@ -3,6 +3,7 @@
 import { COLORS } from "@/constants/colors";
 import { usePhotoUpload } from "@/hooks/usePhotoUpload";
 import { fetchProjectPhotos } from "@/services/photos.service";
+import { fetchProjectById } from "@/services/projects.service";
 import { Photo } from "@/types/photo";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -10,14 +11,13 @@ import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   Image,
   Pressable,
   RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 export default function ProjectPhotosScreen() {
@@ -26,16 +26,24 @@ export default function ProjectPhotosScreen() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
+  const [contractorStatus, setContractorStatus] = useState<string | null>(null);
   const { takePhoto, uploading, success } = usePhotoUpload(String(projectId));
+  const [filter, setFilter] = useState<"all" | "before" | "after">("all");
+  const filteredPhotos = filter === "all" ? photos : photos.filter((p) => p.type === filter);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   async function load() {
     try {
       setLoading(true);
-      const data = await fetchProjectPhotos(String(projectId));
-      setPhotos(data);
+
+      const [photoData, projectData] = await Promise.all([
+        fetchProjectPhotos(String(projectId)),
+        fetchProjectById(String(projectId)), // 🔥 add this
+      ]);
+
+      setPhotos(photoData);
+      setContractorStatus(projectData.contractorStatus); // 🔥 or projectData.assignment.status
     } catch (err) {
-      console.log("Failed to fetch project photos:", err);
       setPhotos([]);
     } finally {
       setLoading(false);
@@ -86,6 +94,46 @@ export default function ProjectPhotosScreen() {
         </Text>
       </View>
 
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          marginBottom: 16,
+        }}
+      >
+        {[
+          { label: "All", value: "all" },
+          { label: "Before", value: "before" },
+          { label: "After", value: "after" },
+        ].map((tab) => {
+          const active = filter === tab.value;
+
+          return (
+            <TouchableOpacity
+              key={tab.value}
+              onPress={() => setFilter(tab.value as any)}
+              style={{
+                flex: 1,
+                marginHorizontal: 4,
+                paddingVertical: 8,
+                borderRadius: 10,
+                backgroundColor: active ? COLORS.primary : "#E5E7EB",
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: active ? "#fff" : "#374151",
+                  fontWeight: "600",
+                }}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {/* CONTENT (ALWAYS SCROLLABLE) */}
       <ScrollView
         refreshControl={
@@ -117,34 +165,78 @@ export default function ProjectPhotosScreen() {
               justifyContent: "space-between",
             }}
           >
-            {photos.map((photo, idx) => (
-              <FadeInImage key={idx} uri={photo.url} />
+            {filteredPhotos.map((photo, idx) => (
+              <FadeInImage
+                key={idx}
+                uri={photo.url}
+                onPress={() => setPreviewUri(photo.url)}
+              />
             ))}
           </View>
         )}
       </ScrollView>
 
       {/* FLOATING ADD PHOTO BUTTON */}
-      <TouchableOpacity
-        onPress={async () => {
-          const ok = await takePhoto();
-          if (ok) load();
-        }}
-        style={{
-          position: "absolute",
-          bottom: 30,
-          right: 20,
-          backgroundColor: COLORS.primary,
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          justifyContent: "center",
-          alignItems: "center",
-          elevation: 8,
-        }}
-      >
-        <Ionicons name="camera" size={30} color="#fff" />
-      </TouchableOpacity>
+      {contractorStatus !== "Completed" && (
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: 20,
+            backgroundColor: "#fff",
+            borderTopWidth: 1,
+            borderTopColor: "#E5E7EB",
+          }}
+        >
+          <View style={{ flexDirection: "row", gap: 12 }}>
+
+            {/* BEFORE */}
+            <TouchableOpacity
+              onPress={async () => {
+                const ok = await takePhoto("before");
+                if (ok) load();
+              }}
+              style={{
+                flex: 1,
+                backgroundColor: "#468d84",
+                paddingVertical: 16,
+                borderRadius: 14,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700" }}>
+                Add Before
+              </Text>
+            </TouchableOpacity>
+
+            {/* AFTER */}
+            <TouchableOpacity
+              disabled={contractorStatus !== "Ongoing"}
+              onPress={async () => {
+                const ok = await takePhoto("after");
+                if (ok) load();
+              }}
+              style={{
+                flex: 1,
+                backgroundColor:
+                  contractorStatus === "Ongoing"
+                    ? "#005356"
+                    : "#9CA3AF",
+                paddingVertical: 16,
+                borderRadius: 14,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "700" }}>
+                Add After
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      )}
 
       {/* UPLOADING OVERLAY */}
       {uploading && (
@@ -183,6 +275,34 @@ export default function ProjectPhotosScreen() {
           <Ionicons name="checkmark-circle" size={90} color="#4ade80" />
         </View>
       )}
+
+      {previewUri && (
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: "#000",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Pressable
+            onPress={() => setPreviewUri(null)}
+            style={{ position: "absolute", top: 60, right: 20, zIndex: 2 }}
+          >
+            <Ionicons name="close" size={32} color="#fff" />
+          </Pressable>
+
+          <Image
+            source={{ uri: previewUri }}
+            resizeMode="contain"
+            style={{ width: "100%", height: "100%" }}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -190,19 +310,9 @@ export default function ProjectPhotosScreen() {
 /* ----------------------------------------
    FADE-IN IMAGE COMPONENT
 ----------------------------------------- */
-function FadeInImage({ uri }: { uri: string }) {
-  const opacity = new Animated.Value(0);
-
-  const onLoad = () => {
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
-  };
-
+function FadeInImage({ uri, onPress }: { uri: string; onPress?: () => void }) {
   return (
-    <Animated.View
+    <View
       style={{
         width: "48%",
         height: 160,
@@ -210,15 +320,15 @@ function FadeInImage({ uri }: { uri: string }) {
         overflow: "hidden",
         marginBottom: 16,
         backgroundColor: "#f1f1f1",
-        opacity,
       }}
     >
-      <Image
-        source={{ uri }}
-        onLoad={onLoad}
-        resizeMode="cover"
-        style={{ width: "100%", height: "100%" }}
-      />
-    </Animated.View>
+      <Pressable style={{ flex: 1 }} onPress={onPress}>
+        <Image
+          source={{ uri }}
+          style={{ width: "100%", height: "100%" }}
+          resizeMode="cover"
+        />
+      </Pressable>
+    </View>
   );
 }

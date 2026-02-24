@@ -32,7 +32,7 @@ export default function ProfileOverview() {
           const data = await getContractor();
           setContractor(data);
         } catch (err) {
-          console.log("Failed to load contractor:", err);
+          // error handled silently
         } finally {
           setLoading(false);
         }

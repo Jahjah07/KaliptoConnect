@@ -1,6 +1,6 @@
-import * as ImagePicker from "expo-image-picker";
 import { uploadPhoto } from "@/services/photos.service";
 import { useAuthStore } from "@/store/auth.store";
+import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 
 export function usePhotoUpload(projectId?: string) {
@@ -9,16 +9,21 @@ export function usePhotoUpload(projectId?: string) {
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const takePhoto = async () => {
+  const takePhoto = async (type: "before" | "after") => {
     if (!projectId) {
       console.log("❌ No project ID provided.");
-      return;
+      return false;
+    }
+
+    if (!type) {
+      console.log("❌ No photo type provided.");
+      return false;
     }
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
       alert("Camera permission is required.");
-      return;
+      return false;
     }
 
     const result = await ImagePicker.launchCameraAsync({
@@ -27,7 +32,7 @@ export function usePhotoUpload(projectId?: string) {
       base64: true,
     });
 
-    if (result.canceled) return;
+    if (result.canceled) return false;
 
     const base64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
 
@@ -35,10 +40,9 @@ export function usePhotoUpload(projectId?: string) {
     setSuccess(false);
 
     try {
-      await uploadPhoto(projectId, base64);
+      await uploadPhoto(projectId, base64, type);
       setSuccess(true);
 
-      // Hide success after delay
       setTimeout(() => setSuccess(false), 1500);
 
       return true;

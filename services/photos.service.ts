@@ -21,13 +21,14 @@ async function authHeader() {
 // -------------------------------
 // Upload photo
 // -------------------------------
-export async function uploadPhoto(projectId: string, base64: string) {
+export async function uploadPhoto(projectId: string, base64: string, type: "before" | "after") {
   const auth = await authHeader();
 
   const res = await axios.post(
     `${API}/mobile/projects/${projectId}/photos`,
     {
-      image: base64,
+      image: base64, 
+      type,
     },
     auth
   );

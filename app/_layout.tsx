@@ -108,11 +108,15 @@ export default function RootLayout() {
       })
     ).data;
 
-    await setDoc(
-      doc(db, "users", uid),
-      { expoPushToken: token },
-      { merge: true }
-    );
+    try {
+      await setDoc(
+        doc(db, "users", uid),
+        { expoPushToken: token },
+        { merge: true }
+      );
+    } catch (err) {
+      // ignore permission errors that might occur if the user signs out quickly
+    }
   }
 
   if (!authLoaded) return null;

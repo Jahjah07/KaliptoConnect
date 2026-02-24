@@ -8,96 +8,109 @@ interface Props {
   id: string;
   name: string;
   address?: string;
-  status?: string;
+
+  projectStatus?: "Pending" | "Ongoing" | "Completed" | "Cancelled";
+  assignmentStatus?: "Pending" | "Ongoing" | "Completed";
 }
 
-const statusColors: any = {
-  Ongoing: "#22C55E",
+const assignmentColors: Record<string, string> = {
   Pending: "#F59E0B",
+  Ongoing: "#22C55E",
   Completed: "#3B82F6",
 };
 
-export default function ProjectListCard({ id, name, address, status }: Props) {
+export default function ProjectListCard({
+  id,
+  name,
+  address,
+  projectStatus,
+  assignmentStatus,
+}: Props) {
   const router = useRouter();
-  const badgeColor = statusColors[status ?? "Pending"] || "#6B7280";
+
+  const isCancelled = projectStatus === "Cancelled";
+
+  const badgeColor = isCancelled
+    ? "#EF4444"
+    : assignmentColors[assignmentStatus ?? "Pending"] || "#6B7280";
+
+  const badgeText = isCancelled
+    ? "Cancelled"
+    : assignmentStatus ?? "Pending";
 
   return (
     <TouchableOpacity
-      onPress={() => id && router.push({
-        pathname: "/(dashboard)/project/[id]",
-        params: { id },
-      })}
+      onPress={() =>
+        id &&
+        router.push({
+          pathname: "/(dashboard)/project/[id]",
+          params: { id },
+        })
+      }
+      style={{
+        backgroundColor: "#fff",
+        padding: 18,
+        borderRadius: 14,
+        marginBottom: 16,
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        shadowOffset: { height: 2, width: 0 },
+        flexDirection: "row",
+        alignItems: "center",
+      }}
+    >
+      <View
         style={{
-          backgroundColor: "#fff",
-          padding: 18,
+          width: 48,
+          height: 48,
           borderRadius: 14,
-          marginBottom: 16,
-          shadowOpacity: 0.05,
-          shadowRadius: 6,
-          shadowOffset: { height: 2, width: 0 },
-          flexDirection: "row",
+          backgroundColor: COLORS.primary + "15",
+          justifyContent: "center",
           alignItems: "center",
         }}
       >
-        {/* Left Icon */}
-        <View
+        <Ionicons name="folder-outline" size={22} color={COLORS.primary} />
+      </View>
+
+      <View style={{ marginLeft: 14, flex: 1 }}>
+        <Text
           style={{
-            width: 48,
-            height: 48,
-            borderRadius: 14,
-            backgroundColor: COLORS.primary + "15",
-            justifyContent: "center",
-            alignItems: "center",
+            fontWeight: "700",
+            color: "#111",
+            fontSize: 16,
+            marginBottom: 4,
           }}
         >
-          <Ionicons name="folder-outline" size={22} color={COLORS.primary} />
-        </View>
+          {name}
+        </Text>
 
-        {/* Right Content */}
-        <View style={{ marginLeft: 14, flex: 1 }}>
-          {/* Project Name */}
+        {address && (
+          <Text style={{ color: "#6B7280", fontSize: 13, marginBottom: 4 }}>
+            {address}
+          </Text>
+        )}
+
+        <View
+          style={{
+            backgroundColor: badgeColor + "22",
+            paddingVertical: 4,
+            paddingHorizontal: 12,
+            borderRadius: 10,
+            alignSelf: "flex-start",
+            marginTop: 2,
+          }}
+        >
           <Text
             style={{
+              color: badgeColor,
+              fontSize: 12,
               fontWeight: "700",
-              color: "#111",
-              fontSize: 16,
-              marginBottom: 4,
             }}
           >
-            {name}
+            {badgeText}
           </Text>
-
-          {/* Address (if any) */}
-          {address && (
-            <Text style={{ color: "#6B7280", fontSize: 13, marginBottom: 4 }}>
-              {address}
-            </Text>
-          )}
-
-          {/* Status Badge */}
-          {status && (
-            <View
-              style={{
-                backgroundColor: badgeColor + "22",
-                paddingVertical: 4,
-                paddingHorizontal: 12,
-                borderRadius: 10,
-                alignSelf: "flex-start",
-                marginTop: 2,
-              }}
-            >
-              <Text
-                style={{
-                  color: badgeColor,
-                  fontSize: 12,
-                  fontWeight: "700",
-                }}
-              >
-                {status}
-              </Text>
-            </View>
-          )}
         </View>
-      </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
 }

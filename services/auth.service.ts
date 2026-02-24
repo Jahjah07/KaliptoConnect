@@ -49,13 +49,11 @@ export async function registerWithEmail(
 
     return user;
   } catch (err: any) {
-    console.log("❌ Registration error:", err);
-
     if (user) {
       try {
         await deleteUser(user);
       } catch (cleanupErr) {
-        console.log("⚠️ Failed to rollback Firebase user:", cleanupErr);
+        // cleanup error ignored
       }
     }
 
@@ -89,7 +87,6 @@ export async function sendPasswordReset(email: string) {
     await firebaseSendPasswordResetEmail(auth, email.trim().toLowerCase());
     return true;
   } catch (error: any) {
-    console.log("Password reset error:", error);
     throw new Error(error.message || "Failed to send reset email");
   }
 }

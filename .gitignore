@@ -8,6 +8,7 @@ node_modules/
 dist/
 web-build/
 expo-env.d.ts
+.eas/
 
 # Native
 .kotlin/
@@ -17,6 +18,13 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+*.ipa
+*.apk
+*.aab
+
+# Firebase & Sensitive Config
+GoogleService-Info.plist
+google-services.json
 
 # Metro
 .metro-health-check*
@@ -25,13 +33,32 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 
-# macOS
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 *.pem
 
 # local env files
-.env*.local
+.env
+.env.local
+.env.*.local
+
+# cache
+.eslintcache
+.cache/
 
 # typescript
 *.tsbuildinfo

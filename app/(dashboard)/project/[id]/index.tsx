@@ -1,11 +1,13 @@
 "use client";
 
 import { COLORS } from "@/constants/colors";
+import { updateAssignmentStatus } from "@/services/assignment.service";
 import { geocodeLocation } from "@/services/geocode.service";
 import { fetchProjectById, fetchProjectStats } from "@/services/projects.service";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { Link, useLocalSearchParams } from "expo-router";
+import axios from "axios";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -25,38 +27,66 @@ export default function ProjectDetail() {
   const [coords, setCoords] = useState<any>(null);
   const [stats, setStats] = useState<{ photos: number; receipts: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const router = useRouter();
+  const loadProject = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const [projectData, statsData] = await Promise.all([
+        fetchProjectById(projectId),
+        fetchProjectStats(projectId),
+      ]);
+
+      setProject(projectData);
+      setStats(statsData);
+
+      if (projectData.projectLocation?.address) {
+        const geo = await geocodeLocation(projectData.projectLocation.address);
+        setCoords(geo);
+      }
+    } catch (err) {
+      // error handled silently
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId]);
 
   // 🔄 Auto-refresh project data
   useFocusEffect(
     useCallback(() => {
-      async function load() {
-        setLoading(true);
-
-        try {
-          // 🔹 Fetch project + stats in parallel
-          const [projectData, statsData] = await Promise.all([
-            fetchProjectById(projectId),
-            fetchProjectStats(projectId),
-          ]);
-
-          setProject(projectData);
-          setStats(statsData);
-
-          // 🔹 Geocode
-          if (projectData.location) {
-            const geo = await geocodeLocation(projectData.location);
-            setCoords(geo);
-          }
-        } catch (err) {
-          console.log("Failed to load project:", err);
-        } finally {
-          setLoading(false);
-        }
-      }
-
-      load();
-    }, [projectId])
+      loadProject();
+    }, [loadProject])
   );
+
+  const handleStart = async () => {
+    try {
+      await updateAssignmentStatus(project.assignment_id, "Ongoing");
+      await loadProject(); // 🔥 real-time refresh
+    } catch (err) {
+      // error handled silently
+    }
+  };
+
+  const handleComplete = async () => {
+    try {
+      await updateAssignmentStatus(project.assignment_id, "Completed");
+      await loadProject(); // 🔥 real-time refresh
+    } catch (error: unknown) {
+      let message = "Unable to complete the job.";
+
+    if (axios.isAxiosError(error)) {
+      message =
+        error.response?.data?.error ||
+        error.message ||
+        message;
+    } else if (error instanceof Error) {
+      message = error.message;
+    }
+
+    setErrorMessage(message);
+    }
+  };
 
   if (loading || !project) {
     return (
@@ -91,7 +121,7 @@ export default function ProjectDetail() {
         </View>
         
           <Text style={{ color: "#6B7280", marginTop: 4, marginBottom: 20 }}>
-            {project.status || "No status available"}
+            {project.contractorStatus}
           </Text>
 
         {/* QUICK STATS */}
@@ -204,8 +234,104 @@ export default function ProjectDetail() {
             </MapView>
           </View>
         )}
-
       </ScrollView>
+
+      {project.contractorStatus === "Pending" && (
+          <TouchableOpacity
+            onPress={handleStart}
+            style={{
+              backgroundColor: COLORS.primary,
+              padding: 16,
+              borderRadius: 14,
+              margin: 14,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700" }}>
+              Start Job
+            </Text>
+          </TouchableOpacity>
+        )}
+        {project.contractorStatus === "Ongoing" && (
+          <TouchableOpacity
+            onPress={handleComplete}
+            style={{
+              backgroundColor: "#005356",
+              padding: 16,
+              borderRadius: 14,
+              margin: 14,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700" }}>
+              Mark as Completed
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {errorMessage && (
+          <View
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundColor: "rgba(0,0,0,0.6)",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 24,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: 16,
+                padding: 24,
+                width: "100%",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: "700",
+                  marginBottom: 10,
+                }}
+              >
+                Cannot Complete Job
+              </Text>
+
+              <Text style={{ color: "#6B7280", marginBottom: 20 }}>
+                {errorMessage}
+              </Text>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setErrorMessage(null);
+                  router.push(`/(dashboard)/project/${projectId}/photos`);
+                }}
+                style={{
+                  backgroundColor: COLORS.primary,
+                  padding: 14,
+                  borderRadius: 12,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "700" }}>
+                  Go to Photos
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setErrorMessage(null)}
+                style={{
+                  padding: 12,
+                  alignItems: "center",
+                  marginTop: 10,
+                }}
+              >
+                <Text style={{ color: "#c23434" }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
     </View>
   );
 }

@@ -24,7 +24,7 @@ export default function ProjectsScreen() {
 
       setProjects(sorted);
     } catch (err) {
-      console.log("Error loading projects:", err);
+      // error handled silently
     }
   }
 
@@ -184,7 +184,8 @@ export default function ProjectsScreen() {
             key={p._id}
             id={p._id}
             name={p.name}
-            status={p.status}
+            projectStatus={p.status}
+            assignmentStatus={p.contractorStatus}
           />
         ))
       )}
