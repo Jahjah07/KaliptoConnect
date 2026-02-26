@@ -23,7 +23,6 @@ expo-env.d.ts
 *.aab
 
 # Firebase & Sensitive Config
-GoogleService-Info.plist
 google-services.json
 
 # Metro
