@@ -214,6 +214,7 @@ export default function ProjectReceiptsScreen() {
         }}
       >
         <TouchableOpacity
+          disabled={contractorStatus !== "Ongoing"}
           onPress={takeReceiptPhoto}
           style={{
             backgroundColor: COLORS.primary,

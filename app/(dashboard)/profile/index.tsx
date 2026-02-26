@@ -1,3 +1,4 @@
+import { AccountLifecycleBanner } from "@/components/profile/AccountLifecycleBanner";
 import { COLORS } from "@/constants/colors";
 import { logout } from "@/services/auth.service";
 import { getContractor } from "@/services/contractor.service";
@@ -56,7 +57,7 @@ export default function ProfileOverview() {
       .map((s: string) => s[0])
       .join("")
       .toUpperCase() || "U";
-
+  const isRestricted = contractor.accountStatus === "pending_deletion";
   return (
     <>
       <ScrollView
@@ -110,8 +111,28 @@ export default function ProfileOverview() {
           <Text style={{ color: COLORS.primary, marginTop: 4 }}>
             {contractor.email}
           </Text>
+          {isRestricted && (
+            <Text
+              style={{
+                marginTop: 8,
+                color: "#F59E0B",
+                fontWeight: "600",
+                fontSize: 13,
+              }}
+            >
+              ⚠ Account pending deletion
+            </Text>
+          )}
         </View>
 
+        <AccountLifecycleBanner
+          accountStatus={contractor.accountStatus}
+          deletionScheduledAt={contractor.deletionScheduledAt}
+          onCancelled={async () => {
+            const refreshed = await getContractor();
+            setContractor(refreshed);
+          }}
+        />
         {/* PERSONAL DETAILS CARD */}
         {/* ACCOUNT SECTION */}
         <View
@@ -137,6 +158,7 @@ export default function ProfileOverview() {
           <SettingsRow
             label="Personal Details"
             icon="person-outline"
+            disabled={isRestricted}
             onPress={() => router.push("/(dashboard)/profile/details")}
           />
 
@@ -145,6 +167,7 @@ export default function ProfileOverview() {
           <SettingsRow
             label="Documents"
             icon="folder-outline"
+            disabled={isRestricted}
             onPress={() => router.push("/(dashboard)/profile/documents")}
           />
         </View>
@@ -198,7 +221,7 @@ export default function ProfileOverview() {
             label="Privacy Policy"
             icon="shield-checkmark-outline"
             onPress={() =>
-              Linking.openURL("https://yourdomain.com/privacy-policy")
+              Linking.openURL("https://crm-system-gray.vercel.app/privacy-policy")
             }
           />
 
@@ -208,7 +231,7 @@ export default function ProfileOverview() {
             label="Terms of Service"
             icon="document-text-outline"
             onPress={() =>
-              Linking.openURL("https://yourdomain.com/terms-of-service")
+              Linking.openURL("https://crm-system-gray.vercel.app/terms-of-service")
             }
           />
 
@@ -217,6 +240,7 @@ export default function ProfileOverview() {
           <SettingsRow
             label="Delete Account"
             icon="trash-outline"
+            disabled={isRestricted}
             danger
             onPress={() =>
               router.push("/(dashboard)/profile/delete-account")

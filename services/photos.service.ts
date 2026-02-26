@@ -1,62 +1,37 @@
 // src/services/photos.service.ts
-import axios from "axios";
-import { getAuth } from "firebase/auth";
 
-const API = process.env.EXPO_PUBLIC_API_URL;
+import { apiFetch } from "@/services/api";
 
-// Helper: attach Firebase token
-async function authHeader() {
-  const user = getAuth().currentUser;
-  if (!user) return {};
+/* -------------------------------
+   Upload photo
+-------------------------------- */
 
-  const token = await user.getIdToken();
-  return {
-    credentials: "include",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-}
-
-// -------------------------------
-// Upload photo
-// -------------------------------
-export async function uploadPhoto(projectId: string, base64: string, type: "before" | "after") {
-  const auth = await authHeader();
-
-  const res = await axios.post(
-    `${API}/mobile/projects/${projectId}/photos`,
-    {
-      image: base64, 
+export function uploadPhoto(
+  projectId: string,
+  base64: string,
+  type: "before" | "after"
+) {
+  return apiFetch(`/mobile/projects/${projectId}/photos`, {
+    method: "POST",
+    body: JSON.stringify({
+      image: base64,
       type,
-    },
-    auth
-  );
-
-  return res.data; // updated photos
+    }),
+  });
 }
 
-// -------------------------------
-// Fetch photos for 1 project
-// -------------------------------
-export async function fetchProjectPhotos(projectId: string) {
-  const auth = await authHeader();
+/* -------------------------------
+   Fetch photos for 1 project
+-------------------------------- */
 
-  const res = await axios.get(
-    `${API}/mobile/projects/${projectId}/photos`,
-    auth
-  );
-
-  return res.data; // array of photos
+export function fetchProjectPhotos(projectId: string) {
+  return apiFetch(`/mobile/projects/${projectId}/photos`);
 }
 
-// -------------------------------
-// Fetch ALL photos across ALL projects
-// -------------------------------
-export async function fetchAllPhotos() {
-  const auth = await authHeader();
+/* -------------------------------
+   Fetch ALL photos across ALL projects
+-------------------------------- */
 
-  const res = await axios.get(`${API}/mobile/photos/all`, auth);
-
-  return res.data; 
+export function fetchAllPhotos() {
+  return apiFetch(`/mobile/photos/all`);
 }

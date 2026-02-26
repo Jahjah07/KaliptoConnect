@@ -1,7 +1,6 @@
 import { auth } from "@/lib/firebase";
 import { createContractor } from "@/services/contractor.service";
-
-import { startTokenAutoRefresh, stopTokenAutoRefresh } from "@/services/tokenRefresh.service";
+import { showError, showSuccess } from "@/services/toast.service";
 import {
   createUserWithEmailAndPassword,
   deleteUser,
@@ -13,27 +12,58 @@ import {
 } from "firebase/auth";
 import { createSession } from "./session.service";
 
-/* ---------------------------------------
-   REGISTER USER (SAFE + ATOMIC)
----------------------------------------- */
+/* =========================================================
+   🔐 Helpers
+========================================================= */
+
+function genericLoginError() {
+  return "Invalid email or password.";
+}
+
+function mapRegisterError(error: any): string {
+  const code = error?.code;
+
+  switch (code) {
+    case "auth/email-already-in-use":
+      return "This email is already registered.";
+    case "auth/weak-password":
+      return "Password must be at least 6 characters.";
+    case "auth/invalid-email":
+      return "Invalid email address.";
+    case "auth/network-request-failed":
+      return "Network error. Please check your connection.";
+    default:
+      return "Unable to create account. Please try again.";
+  }
+}
+
+async function securityDelay() {
+  await new Promise((r) => setTimeout(r, 400));
+}
+
+/* =========================================================
+   📝 REGISTER
+========================================================= */
+
 export async function registerWithEmail(
   email: string,
   password: string,
   displayName?: string
-): Promise<User> {
+): Promise<{ success: boolean; user?: User }> {
   const cleanEmail = email.trim().toLowerCase();
   const cleanName = displayName?.trim() || "";
 
   let user: User | null = null;
 
   try {
-    
-    const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+    const cred = await createUserWithEmailAndPassword(
+      auth,
+      cleanEmail,
+      password
+    );
+
     user = cred.user;
 
-    // 🔥 CRITICAL FIX — wait for token to exist
-    await user.getIdToken(true);
-    await new Promise((r) => setTimeout(r, 800));
     if (cleanName) {
       await updateProfile(user, { displayName: cleanName });
     }
@@ -45,66 +75,119 @@ export async function registerWithEmail(
 
     await createSession();
 
-    startTokenAutoRefresh();
+    showSuccess({
+      title: "Account Created",
+      message: "Your account has been successfully created.",
+    });
 
-    return user;
+    return { success: true, user };
   } catch (err: any) {
     if (user) {
       try {
         await deleteUser(user);
-      } catch (cleanupErr) {
-        // cleanup error ignored
-      }
+      } catch {}
     }
 
-    throw new Error(err.message || "Registration failed");
+    showError({
+      title: "Registration Failed",
+      message: mapRegisterError(err),
+    });
+
+    return { success: false };
   }
 }
 
-/* ---------------------------------------
-   LOGIN (Firebase only)
----------------------------------------- */
+/* =========================================================
+   🔑 LOGIN
+========================================================= */
+
 export async function loginWithEmail(
   email: string,
   password: string
-): Promise<User> {
-  const cred = await signInWithEmailAndPassword(
-    auth,
-    email.trim().toLowerCase(),
-    password
-  );
-  await new Promise((r) => setTimeout(r, 800));
-  await createSession(); // backend session
-  startTokenAutoRefresh(); // 🔥 START AUTO REFRESH
-  return cred.user;
-}
-
-/* ---------------------------------------
-   PASSWORD RESET
----------------------------------------- */
-export async function sendPasswordReset(email: string) {
+): Promise<{ success: boolean; user?: User }> {
   try {
-    await firebaseSendPasswordResetEmail(auth, email.trim().toLowerCase());
-    return true;
-  } catch (error: any) {
-    throw new Error(error.message || "Failed to send reset email");
-  }
-}
+    const cred = await signInWithEmailAndPassword(
+      auth,
+      email.trim().toLowerCase(),
+      password
+    );
 
-/* ---------------------------------------
-   LOGOUT (Firebase only)
----------------------------------------- */
-export async function logout() {
-  stopTokenAutoRefresh(); // 🔥 STOP LOOP
+    try {
+      await createSession(); // 🔥 Role enforcement happens here
+    } catch {
+      // 🔐 Role mismatch → force sign out
+      await auth.signOut();
 
-  try {
-    await fetch(`${process.env.EXPO_PUBLIC_API_URL}/session`, {
-      method: "DELETE",
-      credentials: "include",
+      showError({
+        title: "Login Failed",
+        message: "Invalid email or password.",
+      });
+
+      return { success: false };
+    }
+
+    return { success: true, user: cred.user };
+  } catch {
+    await securityDelay();
+
+    showError({
+      title: "Login Failed",
+      message: genericLoginError(),
     });
+
+    return { success: false };
+  }
+}
+
+/* =========================================================
+   🔁 PASSWORD RESET
+========================================================= */
+
+export async function sendPasswordReset(
+  email: string
+): Promise<{ success: boolean }> {
+  try {
+    await firebaseSendPasswordResetEmail(
+      auth,
+      email.trim().toLowerCase()
+    );
+
+    showSuccess({
+      title: "Reset Email Sent",
+      message: "Check your inbox for password reset instructions.",
+    });
+
+    return { success: true };
+  } catch {
+    showSuccess({
+      title: "Reset Email Sent",
+      message:
+        "If an account exists for this email, a reset link has been sent.",
+    });
+
+    return { success: true };
+  }
+}
+
+/* =========================================================
+   🚪 LOGOUT
+========================================================= */
+
+export async function logout(): Promise<void> {
+  try {
+    await fetch(
+      `${process.env.EXPO_PUBLIC_API_URL}/session`,
+      {
+        method: "DELETE",
+        credentials: "include",
+      }
+    );
   } catch (err) {
-    console.log("⚠️ Failed to delete session cookie:", err);
   }
 
-  return signOut(auth);
+  await signOut(auth);
+
+  showSuccess({
+    title: "Logged Out",
+  });
 }

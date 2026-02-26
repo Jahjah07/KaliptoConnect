@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useEffect, useState } from "react";
@@ -31,7 +32,6 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
-
 /* ---------------------------------------
    Helpers
 ---------------------------------------- */
@@ -94,35 +94,85 @@ export default function DocumentsScreen() {
   /* ---------- Actions ---------- */
 
   async function pickAndUpload(field: AllowedDocumentField) {
-    setBusyField(field);
-    setUploadProgress(0);
+    Alert.alert("Upload Document", "", [
+      {
+        text: "Take Photo",
+        onPress: async () => {
+          const permission =
+            await ImagePicker.requestCameraPermissionsAsync();
+          if (!permission.granted) {
+            Toast.show({ type: "error", text1: "Camera permission required" });
+            return;
+          }
 
+          const result = await ImagePicker.launchCameraAsync({
+            quality: 0.8,
+          });
+
+          if (!result.canceled) {
+            await uploadAsset(field, result.assets[0]);
+          }
+        },
+      },
+      {
+        text: "Choose from Gallery",
+        onPress: async () => {
+          const permission =
+            await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!permission.granted) {
+            Toast.show({ type: "error", text1: "Photo access required" });
+            return;
+          }
+
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.8,
+          });
+
+          if (!result.canceled) {
+            await uploadAsset(field, result.assets[0]);
+          }
+        },
+      },
+      {
+        text: "Choose PDF from Files",
+        onPress: async () => {
+          const res = await DocumentPicker.getDocumentAsync({
+            type: "application/pdf",
+          });
+
+          if (!res.canceled) {
+            await uploadAsset(field, res.assets[0]);
+          }
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
+  async function uploadAsset(field: AllowedDocumentField, asset: any) {
     try {
-      const res = await DocumentPicker.getDocumentAsync({
-        type: ["image/*", "application/pdf"],
-        copyToCacheDirectory: true,
-      });
+      setBusyField(field);
+      setUploadProgress(0);
 
-      if (res.canceled) return;
+      const mimeType =
+        asset.mimeType ||
+        (asset.uri.endsWith(".pdf")
+          ? "application/pdf"
+          : "image/jpeg");
 
-      const asset = res.assets[0];
-      const mimeType = asset.mimeType || "application/octet-stream";
-
-      // ✅ FILE SIZE CHECK
       const sizeError = validateFileSize(asset.size ?? 0, mimeType);
       if (sizeError) {
         Toast.show({ type: "error", text1: sizeError });
         return;
       }
 
-      // 1️⃣ Get presigned URL
       const { uploadUrl, objectKey } =
         await getContractorDocumentPresign({
           field,
           mimeType,
         });
 
-      // 2️⃣ Upload file directly to R2
       const fileBase64 = await FileSystem.readAsStringAsync(asset.uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
@@ -151,7 +201,6 @@ export default function DocumentsScreen() {
         xhr.send(binary);
       });
 
-      // 3️⃣ Save metadata
       const fileUrl = `https://kaliptoconstructionscdn.com/${objectKey}`;
 
       await saveContractorDocumentMetadata({
@@ -166,8 +215,7 @@ export default function DocumentsScreen() {
         type: "success",
         text1: "Upload complete",
       });
-    } catch (err) {
-      console.error(err);
+    } catch {
       Toast.show({
         type: "error",
         text1: "Upload failed",

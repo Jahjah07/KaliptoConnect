@@ -1,6 +1,5 @@
 import { auth } from "@/lib/firebase";
-import { restoreUserSession } from "@/services/session.service";
-import { startTokenAutoRefresh } from "@/services/tokenRefresh.service";
+import { createSession } from "@/services/session.service";
 import { Redirect } from "expo-router";
 import type { User } from "firebase/auth";
 import React, { useEffect, useState } from "react";
@@ -10,22 +9,22 @@ export default function Index() {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    let unsub: any;
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      setUser(u);
 
-    async function init() {
-      await restoreUserSession();
-
-      unsub = auth.onAuthStateChanged((u) => {
-        if (u) {
-          startTokenAutoRefresh(); // 🔥 START ON APP LOAD
+      if (u) {
+        try {
+          // 🔥 Ensure backend session cookie exists
+          await createSession();
+        } catch (err) {
+          console.warn("Session restore failed:", err);
         }
-        setUser(u);
-        setReady(true);
-      });
-    }
+      }
 
-    init();
-    return () => unsub?.();
+      setReady(true);
+    });
+
+    return () => unsub();
   }, []);
 
   if (!ready) return null;

@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "kaliptoconnect",
     slug: "kaliptoconnect",
-    version: "1.0.0",
+    version: "1.0.1",
     orientation: "portrait",
     icon: "./assets/images/Contractor_Application_Logo.png",
     scheme: "kaliptoconnect",
@@ -14,13 +14,13 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.kaliptoconnect.app",
-      buildNumber: "1",
+      buildNumber: "2",
       googleServicesFile: "./GoogleService-Info.plist",
       infoPlist: {
         NSCameraUsageDescription:
-          "This app requires camera access to upload job site photos.",
+          "This app requires camera access to upload job site photos and capture document photos.",
         NSPhotoLibraryUsageDescription:
-          "This app requires photo library access to upload job site photos.",
+          "This app requires photo library access to upload job site photos and to select document images.",
         NSPhotoLibraryAddUsageDescription:
           "This app needs permission to save photos.",
         UIBackgroundModes: ["remote-notification"]

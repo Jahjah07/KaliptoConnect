@@ -7,7 +7,7 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Stack, useRouter } from "expo-router";
 import { Platform } from "react-native";
-import Toast from "react-native-toast-message";
+import Toast, { BaseToast, ErrorToast } from "react-native-toast-message";
 
 // 3️⃣ Firebase
 import { onAuthStateChanged } from "firebase/auth";
@@ -119,12 +119,59 @@ export default function RootLayout() {
     }
   }
 
+  const toastConfig = {
+    success: (props: any) => (
+      <BaseToast
+        {...props}
+        style={{
+          borderLeftColor: "#10B981",
+          height: 72,
+          borderRadius: 16,
+          paddingHorizontal: 12,
+        }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+        }}
+        text1Style={{
+          fontSize: 16,
+          fontWeight: "700",
+        }}
+        text2Style={{
+          fontSize: 14,
+          opacity: 0.8,
+        }}
+      />
+    ),
+
+    error: (props: any) => (
+      <ErrorToast
+        {...props}
+        style={{
+          borderLeftColor: "#EF4444",
+          height: 72,
+          borderRadius: 16,
+          paddingHorizontal: 12,
+        }}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+        }}
+        text1Style={{
+          fontSize: 16,
+          fontWeight: "700",
+        }}
+        text2Style={{
+          fontSize: 14,
+        }}
+      />
+    ),
+  };
+
   if (!authLoaded) return null;
 
   return (
     <>
       <Stack screenOptions={{ headerShown: false }} />
-      <Toast />
+      <Toast config={toastConfig} />
     </>
   );
 }

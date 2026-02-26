@@ -8,7 +8,6 @@ export function useReceiptUpload(projectId?: string) {
 
   const takeReceiptPhoto = async () => {
     if (!projectId) {
-      console.log("❌ No project ID provided.");
       return false;
     }
 

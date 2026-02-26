@@ -1,118 +1,83 @@
 // src/services/api.ts
-import { auth } from "@/lib/firebase";
+import { router } from "expo-router";
+import Toast from "react-native-toast-message";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "https://crm-system-gray.vercel.app/api";
+const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  "https://crm-system-gray.vercel.app/api";
 
-async function getToken(): Promise<string | null> {
-  try {
-    const user = auth.currentUser;
-    if (!user) return null;
-    // expires => refreshes automatically
-    return await user.getIdToken(true);
-  } catch (err) {
-    console.warn("Unable to get token", err);
-    return null;
-  }
-}
+type ApiOptions = RequestInit & {
+  skipJson?: boolean;
+};
 
-async function fetchWithAuth(input: RequestInfo, init?: RequestInit) {
-  const token = await getToken();
-  const headers = {
-    "Content-Type": "application/json",
-    ...(init?.headers || {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-
-  const res = await fetch(typeof input === "string" ? input : input, {
-    ...(init || {}),
+export async function apiFetch(
+  path: string,
+  options: ApiOptions = {}
+) {
+  const {
+    method = "GET",
+    skipJson = false,
     headers,
+    body,
+    ...rest
+  } = options;
+
+  const response = await fetch(`${API_URL}${path}`, {
+    method,
+    credentials: "include",
+    headers: {
+      ...(body && !skipJson
+        ? { "Content-Type": "application/json" }
+        : {}),
+      ...headers,
+    },
+    body,
+    ...rest,
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API error ${res.status}: ${text}`);
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+
+    try {
+      const data = await response.json();
+      message = data?.error || message;
+    } catch {
+      const text = await response.text();
+      if (text) message = text;
+    }
+
+    /* ------------------------------------------
+       🔐 ACCOUNT LIFECYCLE INTERCEPTOR
+    ------------------------------------------ */
+
+    if (
+      message.includes("pending deletion") ||
+      message.includes("ACCOUNT_PENDING_DELETION")
+    ) {
+      Toast.show({
+        type: "error",
+        text1: "Account Scheduled for Deletion",
+        text2:
+          "Your account is scheduled for deletion. Restore it to continue.",
+      });
+
+      // Optional redirect
+      router.replace("/(dashboard)/profile");
+
+      throw new Error("ACCOUNT_PENDING_DELETION");
+    }
+
+    throw new Error(message);
   }
 
-  const contentType = res.headers.get("content-type") || "";
+  if (skipJson) return response;
+
+  const contentType =
+    response.headers.get("content-type") || "";
+
   if (contentType.includes("application/json")) {
-    return await res.json();
+    return response.json();
   }
+
   return null;
-}
-
-/* -------------------------
-   Projects
-   ------------------------- */
-
-export type ProjectCreateInput = {
-  name: string;
-  address?: string;
-  description?: string;
-};
-
-export async function getProjects() {
-  return await fetchWithAuth(`${API_URL}/projects`);
-}
-
-export async function createProject(payload: ProjectCreateInput) {
-  return await fetchWithAuth(`${API_URL}/projects`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function getProjectById(id: string) {
-  return await fetchWithAuth(`${API_URL}/projects/${id}`);
-}
-
-export async function deleteProject(id: string) {
-  return await fetchWithAuth(`${API_URL}/projects/${id}`, {
-    method: "DELETE",
-  });
-}
-
-/* -------------------------
-   Photos & Receipts (metadata)
-   ------------------------- */
-
-export type PhotoPayload = {
-  fileName: string;
-  url?: string; // if you uploaded to storage (S3/GCS) return URL
-  caption?: string;
-};
-
-export async function addPhoto(projectId: string, payload: PhotoPayload) {
-  return await fetchWithAuth(`${API_URL}/projects/${projectId}/photos`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export type ReceiptPayload = {
-  fileName: string;
-  url?: string;
-  amount?: number;
-  note?: string;
-};
-
-export async function addReceipt(projectId: string, payload: ReceiptPayload) {
-  return await fetchWithAuth(`${API_URL}/projects/${projectId}/receipts`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-/* -------------------------
-   User
-   ------------------------- */
-
-export async function getCurrentUser() {
-  return await fetchWithAuth(`${API_URL}/user`);
-}
-
-export async function updateProfile(payload: Record<string, any>) {
-  return await fetchWithAuth(`${API_URL}/user/update`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
 }

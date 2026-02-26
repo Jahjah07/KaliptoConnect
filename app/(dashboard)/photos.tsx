@@ -4,11 +4,12 @@ import { fetchProjectPhotos } from "@/services/photos.service";
 import { fetchContractorProjects } from "@/services/projects.service";
 import { Photo, ProjectPhotosGroup } from "@/types/photo";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
-  Image,
+  FlatList,
   RefreshControl,
   ScrollView,
   Text,
@@ -98,130 +99,141 @@ export default function PhotosScreen() {
   }
 
   return (
-  <ScrollView
-    style={{ flex: 1, height: "100%", backgroundColor: COLORS.background }}
-    refreshControl={
-      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-    }
-  >  
-    <View style={{ flex: 1, backgroundColor: COLORS.background, height: "100%" }}>
-      {/* HEADER */}
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 60,
-          paddingBottom: 10,
-        }}
-      >
-        {/* Top Row */}
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Text
+    <FlatList
+      data={filteredPhotos}
+      keyExtractor={(item) => item._id}
+      numColumns={2}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+      columnWrapperStyle={{
+        justifyContent: "space-between",
+        paddingHorizontal: 24,
+      }}
+      contentContainerStyle={{
+        paddingBottom: 120,
+      }}
+      ListHeaderComponent={
+        <>
+          {/* HEADER */}
+          <View
             style={{
-              fontSize: 26,
-              fontWeight: "700",
-              color: COLORS.primaryDark,
+              paddingHorizontal: 24,
+              paddingTop: 60,
+              paddingBottom: 10,
+              backgroundColor: COLORS.background,
             }}
           >
-            Site Photos
-          </Text>
-
-          <TouchableOpacity
-            onPress={() =>
-              setSortOrder((prev) =>
-                prev === "newest" ? "oldest" : "newest"
-              )
-            }
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 8,
-              borderRadius: 20,
-              backgroundColor: "#F3F4F6",
-              flexDirection: "row",
-              alignItems: "center",
-            }}
-          >
-            <Ionicons
-              name={sortOrder === "newest" ? "arrow-down" : "arrow-up"}
-              size={16}
-              color="#374151"
-            />
-            <Text
+            <View
               style={{
-                marginLeft: 6,
-                fontSize: 12,
-                fontWeight: "600",
-                color: "#374151",
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              {sortOrder === "newest" ? "Newest" : "Oldest"}
+              <Text
+                style={{
+                  fontSize: 26,
+                  fontWeight: "700",
+                  color: COLORS.primaryDark,
+                }}
+              >
+                Site Photos
+              </Text>
+
+              <TouchableOpacity
+                onPress={() =>
+                  setSortOrder((prev) =>
+                    prev === "newest" ? "oldest" : "newest"
+                  )
+                }
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 20,
+                  backgroundColor: "#F3F4F6",
+                  flexDirection: "row",
+                  alignItems: "center",
+                }}
+              >
+                <Ionicons
+                  name={sortOrder === "newest" ? "arrow-down" : "arrow-up"}
+                  size={16}
+                  color="#374151"
+                />
+                <Text
+                  style={{
+                    marginLeft: 6,
+                    fontSize: 12,
+                    fontWeight: "600",
+                    color: "#374151",
+                  }}
+                >
+                  {sortOrder === "newest" ? "Newest" : "Oldest"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ color: COLORS.primary, marginTop: 4 }}>
+              {filteredPhotos.length} photos
             </Text>
-          </TouchableOpacity>
-        </View>
+          </View>
 
-        {/* Subtitle */}
-        <Text style={{ color: COLORS.primary, marginTop: 4 }}>
-          {filteredPhotos.length} photos
-        </Text>
-      </View>
+          {/* SEARCH */}
+          <View
+            style={{
+              backgroundColor: "#F1F5F9",
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              borderRadius: 12,
+              flexDirection: "row",
+              alignItems: "center",
+              marginHorizontal: 24,
+              marginTop: 10,
+            }}
+          >
+            <Ionicons name="search-outline" size={20} color="#6B7280" />
+            <TextInput
+              placeholder="Search photos..."
+              value={search}
+              onChangeText={setSearch}
+              style={{ marginLeft: 10, flex: 1 }}
+            />
+          </View>
 
-      {/* SEARCH */}
-      <View
-        style={{
-          backgroundColor: "#F1F5F9",
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-          borderRadius: 12,
-          flexDirection: "row",
-          alignItems: "center",
-          marginHorizontal: 24,
-          marginTop: 10,
-        }}
-      >
-        <Ionicons name="search-outline" size={20} color="#6B7280" />
-        <TextInput
-          placeholder="Search photos..."
-          value={search}
-          onChangeText={setSearch}
-          style={{ marginLeft: 10, flex: 1 }}
-        />
-      </View>
+          {/* PROJECT CARDS (horizontal ScrollView is OK) */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              paddingVertical: 12,
+            }}
+          >
+            <ProjectCard
+              label="All Projects"
+              active={projectFilter === "all"}
+              subtitle={`${allPhotos.length} photos`}
+              onPress={() => setProjectFilter("all")}
+            />
 
-      {/* PROJECT CARDS */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 12 }}
-      >
-        <ProjectCard
-          label="All Projects"
-          active={projectFilter === "all"}
-          subtitle={`${allPhotos.length} photos`}
-          onPress={() => setProjectFilter("all")}
-        />
-
-        {sortedGroups.map((p) => (
-          <ProjectCard
-            key={p.projectId}
-            label={p.projectName}
-            subtitle={
-              p.photos.length === 0
-                ? "No photos yet"
-                : `${p.photos.length} photos`
-            }
-            active={projectFilter === p.projectId}
-            onPress={() => setProjectFilter(p.projectId)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* CONTENT */}
-      {filteredPhotos.length === 0 ? (
+            {sortedGroups.map((p) => (
+              <ProjectCard
+                key={p.projectId}
+                label={p.projectName}
+                subtitle={
+                  p.photos.length === 0
+                    ? "No photos yet"
+                    : `${p.photos.length} photos`
+                }
+                active={projectFilter === p.projectId}
+                onPress={() => setProjectFilter(p.projectId)}
+              />
+            ))}
+          </ScrollView>
+        </>
+      }
+      ListEmptyComponent={
         <EmptyState
           title={
             projectFilter === "all"
@@ -230,46 +242,34 @@ export default function PhotosScreen() {
           }
           subtitle="Photos uploaded on site will appear here"
         />
-      ) : (
-        <ScrollView
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              justifyContent: "space-between",
-            }}
-          >
-            {filteredPhotos.map((photo, index) => (
-              <FadeInImage key={index} uri={photo.url} />
-            ))}
-          </View>
-        </ScrollView>
+      }
+      renderItem={({ item }) => (
+        <MemoizedFadeInImage uri={item.url} />
       )}
-    </View>
-  </ScrollView>
+      initialNumToRender={8}
+      maxToRenderPerBatch={6}
+      windowSize={5}
+      removeClippedSubviews
+    />
   );
 }
 
 /* -----------------------------
    FADE-IN IMAGE
 ------------------------------*/
-function FadeInImage({ uri }: { uri: string }) {
-  const opacity = new Animated.Value(0);
+const MemoizedFadeInImage = React.memo(({ uri }: { uri: string }) => {
+  const opacity = React.useRef(new Animated.Value(0)).current;
 
   return (
     <Animated.View
       style={{
-        width: "48%",
+        flex: 1,
         height: 160,
         borderRadius: 14,
         overflow: "hidden",
         marginBottom: 16,
         backgroundColor: "#f1f1f1",
+        marginHorizontal: 4,
         opacity,
       }}
     >
@@ -283,8 +283,8 @@ function FadeInImage({ uri }: { uri: string }) {
           }).start()
         }
         style={{ width: "100%", height: "100%" }}
-        resizeMode="cover"
+        contentFit="cover"
       />
     </Animated.View>
   );
-}
+});

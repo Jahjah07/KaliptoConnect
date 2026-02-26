@@ -1,4 +1,5 @@
 export type Photo = {
+  _id: string;
   url: string;
   public_id: string;
   type: "before" | "after";

@@ -11,12 +11,10 @@ export function usePhotoUpload(projectId?: string) {
 
   const takePhoto = async (type: "before" | "after") => {
     if (!projectId) {
-      console.log("❌ No project ID provided.");
       return false;
     }
 
     if (!type) {
-      console.log("❌ No photo type provided.");
       return false;
     }
 
@@ -47,8 +45,6 @@ export function usePhotoUpload(projectId?: string) {
 
       return true;
     } catch (err) {
-      console.error("Upload error:", err);
-      alert("Failed to upload photo");
       return false;
     } finally {
       setUploading(false);

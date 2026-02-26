@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Text,
   TextInput,
@@ -243,6 +244,34 @@ export default function Login() {
             Don&apos;t have an account? Create one
           </Text>
         </TouchableOpacity>
+
+        <View style={{ marginTop: 40, alignItems: "center" }}>
+          <Text style={{ fontSize: 12, color: "#6B7280", textAlign: "center" }}>
+            By continuing, you agree to our{" "}
+            <Text
+              style={{ color: COLORS.primary }}
+              onPress={() =>
+                Linking.openURL(
+                  "https://crm-system-gray.vercel.app/terms-of-service"
+                )
+              }
+            >
+              Terms of Service
+            </Text>{" "}
+            and{" "}
+            <Text
+              style={{ color: COLORS.primary }}
+              onPress={() =>
+                Linking.openURL(
+                  "https://crm-system-gray.vercel.app/privacy-policy"
+                )
+              }
+            >
+              Privacy Policy
+            </Text>
+            .
+          </Text>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );

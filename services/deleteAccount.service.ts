@@ -1,32 +1,19 @@
-import { getAuth } from "firebase/auth";
+import { apiFetch } from "@/services/api";
 
-export async function deleteAccount() {
-  const auth = getAuth();
-  const user = auth.currentUser;
+/* ---------------------------------------
+   REQUEST ACCOUNT DELETION
+----------------------------------------*/
+export function requestAccountDeletion() {
+  return apiFetch("/mobile/contractor/request-deletion", {
+    method: "POST",
+  });
+}
 
-  if (!user) throw new Error("No user");
-
-  const token = await user.getIdToken(true);
-
-  /* -------------------------
-     1. Delete backend data
-  -------------------------- */
-  const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/account/delete`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  if (!res.ok) {
-    throw new Error("Backend deletion failed");
-  }
-
-  /* -------------------------
-     2. Delete Firebase user
-  -------------------------- */
-  await user.delete();
+/* ---------------------------------------
+   CANCEL ACCOUNT DELETION
+----------------------------------------*/
+export function cancelAccountDeletion() {
+  return apiFetch("/mobile/contractor/cancel-deletion", {
+    method: "POST",
+  });
 }

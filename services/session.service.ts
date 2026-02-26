@@ -1,3 +1,5 @@
+// session.service.ts
+
 import { auth } from "@/lib/firebase";
 import Constants from "expo-constants";
 
@@ -5,41 +7,34 @@ const API_URL =
   Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ||
   "https://crm-system-gray.vercel.app/api";
 
-/**
- * Creates secure HTTP-only session cookie on backend
- */
-export async function createSession(): Promise<void> {
+export async function createSession() {
   const user = auth.currentUser;
+  if (!user) {
+    throw new Error("No authenticated user");
+  }
 
-  if (!user) throw new Error("No Firebase user");
-
-  // 🚨 CRITICAL: force token refresh after signup/login
-  const idToken = await user.getIdToken(true);
+  const idToken = await user.getIdToken();
 
   const res = await fetch(`${API_URL}/session`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ idToken }),
+    credentials: "include", // 🔥 critical
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      idToken,
+      app: "mobile",
+    }),
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    console.log("❌ Session creation failed:", err);
-    throw new Error("Failed to establish secure session");
+    let message = "Failed to create session";
+
+    try {
+      const data = await res.json();
+      message = data?.error || message;
+    } catch {}
+
+    throw new Error(message);
   }
-}
-
-export async function restoreUserSession() {
-  const user = auth.currentUser;
-  if (!user) return;
-
-  const token = await user.getIdToken(true);
-
-  await fetch(`${API_URL}/session`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ idToken: token }),
-  });
 }

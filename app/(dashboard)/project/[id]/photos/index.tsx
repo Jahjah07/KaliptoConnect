@@ -7,14 +7,14 @@ import { fetchProjectById } from "@/services/projects.service";
 import { Photo } from "@/types/photo";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { Image } from "expo-image";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
+  FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   Text,
   TouchableOpacity,
   View
@@ -135,18 +135,22 @@ export default function ProjectPhotosScreen() {
       </View>
 
       {/* CONTENT (ALWAYS SCROLLABLE) */}
-      <ScrollView
+      <FlatList
+        data={filteredPhotos}
+        keyExtractor={(item) => item._id}
+        numColumns={2}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        contentContainerStyle={{
-          flexGrow: 1,
+        columnWrapperStyle={{
+          justifyContent: "space-between",
           paddingHorizontal: 20,
-          paddingBottom: 120,
         }}
-      >
-        {photos.length === 0 ? (
-          <View style={{ flex: 1, alignItems: "center", marginTop: 80 }}>
+        contentContainerStyle={{
+          paddingBottom: 140,
+        }}
+        ListEmptyComponent={
+          <View style={{ alignItems: "center", marginTop: 80 }}>
             <Ionicons
               name="image-outline"
               size={60}
@@ -157,24 +161,18 @@ export default function ProjectPhotosScreen() {
               No photos available
             </Text>
           </View>
-        ) : (
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              justifyContent: "space-between",
-            }}
-          >
-            {filteredPhotos.map((photo, idx) => (
-              <FadeInImage
-                key={idx}
-                uri={photo.url}
-                onPress={() => setPreviewUri(photo.url)}
-              />
-            ))}
-          </View>
+        }
+        renderItem={({ item }) => (
+          <MemoizedPhoto
+            uri={item.url}
+            onPress={() => setPreviewUri(item.url)}
+          />
         )}
-      </ScrollView>
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        removeClippedSubviews
+      />
 
       {/* FLOATING ADD PHOTO BUTTON */}
       {contractorStatus !== "Completed" && (
@@ -194,6 +192,7 @@ export default function ProjectPhotosScreen() {
 
             {/* BEFORE */}
             <TouchableOpacity
+              disabled={contractorStatus !== "Ongoing"}
               onPress={async () => {
                 const ok = await takePhoto("before");
                 if (ok) load();
@@ -298,7 +297,7 @@ export default function ProjectPhotosScreen() {
 
           <Image
             source={{ uri: previewUri }}
-            resizeMode="contain"
+            contentFit="contain"
             style={{ width: "100%", height: "100%" }}
           />
         </View>
@@ -310,25 +309,28 @@ export default function ProjectPhotosScreen() {
 /* ----------------------------------------
    FADE-IN IMAGE COMPONENT
 ----------------------------------------- */
-function FadeInImage({ uri, onPress }: { uri: string; onPress?: () => void }) {
-  return (
-    <View
-      style={{
-        width: "48%",
-        height: 160,
-        borderRadius: 14,
-        overflow: "hidden",
-        marginBottom: 16,
-        backgroundColor: "#f1f1f1",
-      }}
-    >
-      <Pressable style={{ flex: 1 }} onPress={onPress}>
-        <Image
-          source={{ uri }}
-          style={{ width: "100%", height: "100%" }}
-          resizeMode="cover"
-        />
-      </Pressable>
-    </View>
-  );
-}
+const MemoizedPhoto = React.memo(
+  ({ uri, onPress }: { uri: string; onPress?: () => void }) => {
+    return (
+      <View
+        style={{
+          flex: 1,
+          height: 160,
+          borderRadius: 14,
+          overflow: "hidden",
+          marginBottom: 16,
+          backgroundColor: "#f1f1f1",
+          marginHorizontal: 4,
+        }}
+      >
+        <Pressable style={{ flex: 1 }} onPress={onPress}>
+          <Image
+            source={{ uri }}
+            style={{ width: "100%", height: "100%" }}
+            contentFit="cover"
+          />
+        </Pressable>
+      </View>
+    );
+  }
+);

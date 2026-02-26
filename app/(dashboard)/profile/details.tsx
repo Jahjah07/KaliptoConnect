@@ -4,8 +4,8 @@ import {
   updateContractorProfile,
 } from "@/services/contractor.service";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -42,14 +42,27 @@ export default function PersonalDetailsScreen() {
     "Foreman",
   ];
 
-  useEffect(() => {
-    async function load() {
-      const data = await getContractor();
-      setContractor(data);
-      setLoading(false);
-    }
-    load();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      async function load() {
+        setLoading(true);
+        try {
+          const data = await getContractor();
+          if (isActive) setContractor(data);
+        } finally {
+          if (isActive) setLoading(false);
+        }
+      }
+
+      load();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   if (loading || !contractor) {
     return (

@@ -170,16 +170,38 @@ export default function Register() {
             />
           </TouchableOpacity>
         </View>
-        <Text style={{ fontSize: 12, color: "#666", marginBottom: 16 }}>
-          By continuing, you agree to our{" "}
+        <Text
+          style={{
+            fontSize: 12,
+            color: "#6B7280",
+            marginBottom: 16,
+            textAlign: "center",
+            lineHeight: 18,
+          }}
+        >
+          By creating an account, you agree to our{" "}
           <Text
-            style={{ color: "#007AFF" }}
+            style={{ color: COLORS.primary }}
             onPress={() =>
-              Linking.openURL("https://yourdomain.com/privacy-policy")
+              Linking.openURL(
+                "https://crm-system-gray.vercel.app/terms-of-service"
+              )
+            }
+          >
+            Terms of Service
+          </Text>{" "}
+          and{" "}
+          <Text
+            style={{ color: COLORS.primary }}
+            onPress={() =>
+              Linking.openURL(
+                "https://crm-system-gray.vercel.app/privacy-policy"
+              )
             }
           >
             Privacy Policy
           </Text>
+          .
         </Text>
         {/* CTA */}
         <Button
