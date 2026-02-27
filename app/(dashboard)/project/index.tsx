@@ -35,9 +35,7 @@ export default function ProjectsScreen() {
 
   // FILTER BY STATUS
   const filteredByStatus =
-    filter === "All"
-      ? projects
-      : projects.filter((p) => p.status === filter);
+    filter === "All" ? projects : projects.filter((p) => p.contractorStatus === filter);
 
   // FILTER BY SEARCH
   const filteredProjects = filteredByStatus.filter((p) =>
@@ -126,7 +124,7 @@ export default function ProjectsScreen() {
 
       {/* FILTER BUTTONS */}
       <View style={{ flexDirection: "row", marginBottom: 20 }}>
-        {["All", "Active", "Pending", "Completed"].map((item) => {
+        {["All", "Ongoing", "Pending", "Completed"].map((item) => {
           const active = filter === item;
 
           return (
@@ -184,7 +182,7 @@ export default function ProjectsScreen() {
             key={p._id}
             id={p._id}
             name={p.name}
-            projectStatus={p.status}
+            projectStatus={p.projectStatus}
             assignmentStatus={p.contractorStatus}
           />
         ))

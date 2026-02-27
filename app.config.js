@@ -14,7 +14,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.kaliptoconnect.app",
-      buildNumber: "2",
+      buildNumber: "1",
       googleServicesFile: "./GoogleService-Info.plist",
       infoPlist: {
         NSCameraUsageDescription:
@@ -83,10 +83,6 @@ export default {
       EXPO_PUBLIC_FIREBASE_APP_ID:
         process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
       ENVIRONMENT: process.env.ENVIRONMENT,
-      CLOUDINARY_CLOUD_NAME:
-        process.env.CLOUDINARY_CLOUD_NAME,
-      CLOUDINARY_UPLOAD_PRESET:
-        process.env.CLOUDINARY_UPLOAD_PRESET,
       EXPO_PUBLIC_API_URL:
         process.env.EXPO_PUBLIC_API_URL,
       eas: {
