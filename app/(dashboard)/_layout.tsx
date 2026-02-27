@@ -3,7 +3,7 @@ import { db } from "@/lib/firebase";
 import { useAuthStore } from "@/store/auth.store";
 import { Ionicons } from "@expo/vector-icons";
 import * as Notifications from "expo-notifications";
-import { Redirect, Tabs } from "expo-router";
+import { Redirect, router, Tabs } from "expo-router";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -71,12 +71,11 @@ export default function DashboardLayout() {
             <Ionicons name="folder" size={22} color={color} />
           ),
         }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.navigate("project"); // forces root
+        listeners={{
+          tabPress: () => {
+            router.replace("/(dashboard)/project");
           },
-        })}
+        }}
       />
 
       <Tabs.Screen
@@ -114,19 +113,14 @@ export default function DashboardLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) => (
-            <Ionicons
-              name="person-circle"
-              size={24}
-              color={color}
-            />
+            <Ionicons name="person-circle" size={24} color={color} />
           ),
         }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.navigate("profile"); // go to root
+        listeners={{
+          tabPress: () => {
+            router.replace("/(dashboard)/profile");
           },
-        })}
+        }}
       />
 
       {/* Hidden index route */}
