@@ -71,6 +71,12 @@ export default function DashboardLayout() {
             <Ionicons name="folder" size={22} color={color} />
           ),
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate("project"); // forces root
+          },
+        })}
       />
 
       <Tabs.Screen
@@ -115,6 +121,12 @@ export default function DashboardLayout() {
             />
           ),
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.navigate("profile"); // go to root
+          },
+        })}
       />
 
       {/* Hidden index route */}

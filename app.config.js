@@ -17,6 +17,7 @@ export default {
       buildNumber: "1",
       googleServicesFile: "./GoogleService-Info.plist",
       infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription:
           "This app requires camera access to upload job site photos and capture document photos.",
         NSPhotoLibraryUsageDescription:
