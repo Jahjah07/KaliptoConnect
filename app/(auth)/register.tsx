@@ -50,7 +50,14 @@ export default function Register() {
 
     setLoading(true);
     try {
-      await registerWithEmail(email.trim(), password, name.trim());
+      const result = await registerWithEmail(
+        email.trim(),
+        password,
+        name.trim()
+      );
+
+      if (!result.success) return;
+
       router.replace("/");
     } catch (err: any) {
       Alert.alert("Registration Failed", err.message || "Unable to register");

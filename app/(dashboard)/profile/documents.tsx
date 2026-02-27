@@ -22,6 +22,7 @@ import {
   Alert,
   Button,
   Image,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -117,10 +118,29 @@ export default function DocumentsScreen() {
       {
         text: "Choose from Gallery",
         onPress: async () => {
-          const permission =
-            await ImagePicker.requestMediaLibraryPermissionsAsync();
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
           if (!permission.granted) {
-            Toast.show({ type: "error", text1: "Photo access required" });
+            if (!permission.canAskAgain) {
+              // User permanently denied
+              Alert.alert(
+                "Photo Permission Required",
+                "Please enable photo access in your device settings to upload images.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Open Settings",
+                    onPress: () => Linking.openSettings(),
+                  },
+                ]
+              );
+            } else {
+              Alert.alert(
+                "Permission Required",
+                "We need access to your photos to upload images."
+              );
+            }
+
             return;
           }
 

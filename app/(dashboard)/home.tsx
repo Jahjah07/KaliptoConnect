@@ -18,7 +18,7 @@ export default function Home() {
   const missingFields = {
     name: !contractor?.name,
     email: !contractor?.email,
-    phone: !contractor?.phoneNumber,
+    phone: !contractor?.phone,
     trade: !contractor?.trade,
   };
   const requiredDocs = [

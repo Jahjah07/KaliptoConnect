@@ -68,13 +68,18 @@ export async function registerWithEmail(
       await updateProfile(user, { displayName: cleanName });
     }
 
-    await createContractor({
-      name: cleanName,
-      email: cleanEmail,
-    });
-
     await createSession();
 
+    try {
+      await createContractor({
+        name: cleanName,
+        email: cleanEmail,
+      });
+    } catch (err) {
+      await logout(); // remove session
+      throw err;
+    }
+    
     showSuccess({
       title: "Account Created",
       message: "Your account has been successfully created.",

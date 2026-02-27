@@ -1,10 +1,8 @@
 // session.service.ts
-
 import { auth } from "@/lib/firebase";
-import Constants from "expo-constants";
 
 const API_URL =
-  Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ||
+  process.env.EXPO_PUBLIC_API_URL ||
   "https://crm-system-gray.vercel.app/api";
 
 export async function createSession() {
@@ -17,7 +15,7 @@ export async function createSession() {
 
   const res = await fetch(`${API_URL}/session`, {
     method: "POST",
-    credentials: "include", // 🔥 critical
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
